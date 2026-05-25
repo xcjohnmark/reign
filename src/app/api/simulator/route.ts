@@ -1,0 +1,111 @@
+import { NextRequest, NextResponse } from "next/server";
+import { readState, writeState, initializeState, simulateMatchday } from "../../../utils/gameStateHandler";
+
+export async function GET(request: NextRequest) {
+  try {
+    const state = readState();
+
+    // Generate leaderboard
+    const leaderboard = state.users.map(u => {
+      const totalScore = u.history.reduce((sum, h) => sum + h.score, 0);
+      const totalReward = u.history.reduce((sum, h) => sum + h.reward, 0);
+      const totalNetProfit = u.history.reduce((sum, h) => sum + h.netProfit, 0);
+
+      return {
+        wallet: u.wallet,
+        name: u.name,
+        totalScore,
+        totalReward,
+        totalNetProfit,
+        hasSquad: u.squad !== null,
+        lockedCapital: u.onChainState?.lockedPrincipal || 0.0
+      };
+    });
+
+    // Sort leaderboard by Total Score (descending)
+    leaderboard.sort((a, b) => b.totalScore - a.totalScore);
+
+    return NextResponse.json({
+      currentMatchday: state.currentMatchday,
+      epochEnded: state.epochEnded,
+      leaderboard,
+      standings: state.standings,
+      activeCountries: state.activeCountries,
+      matchdayHistory: state.matchdayHistory.filter(h => h.simulated)
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { action } = body;
+
+    // Reset Action
+    if (action === "reset") {
+      const newState = initializeState();
+      return NextResponse.json({
+        success: true,
+        message: "Tournament successfully reset",
+        currentMatchday: newState.currentMatchday,
+        epochEnded: newState.epochEnded
+      });
+    }
+
+    // Default: Simulate current matchday
+    let state = readState();
+
+    if (state.epochEnded) {
+      return NextResponse.json({ error: "Tournament epoch has already ended" }, { status: 400 });
+    }
+
+    // Ensure all users have a squad before simulating
+    // Specifically, if the user (or any mock competitor) does not have a squad, they get 0, but we should make sure we have at least one user
+    if (state.users.length === 0) {
+      return NextResponse.json({ error: "No users registered. Please submit your squad first." }, { status: 400 });
+    }
+
+    const currentMd = state.currentMatchday;
+    state = simulateMatchday(state);
+
+    // Get the simulated history for the just-completed matchday
+    const lastResult = state.matchdayHistory.find(h => h.matchday === currentMd)!;
+
+    // Prepare transaction payload for ReignPool.settleMatchday
+    const settleAddresses: string[] = [];
+    const settleProfitsOrLosses: string[] = []; // scaled to 18 decimals, as strings
+
+    if (lastResult.nrpsResult) {
+      for (const res of lastResult.nrpsResult.userResults) {
+        settleAddresses.push(res.userId);
+        settleProfitsOrLosses.push(scaleTo18Decimals(res.netProfit));
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      simulatedMatchday: currentMd,
+      nextMatchday: state.currentMatchday,
+      epochEnded: state.epochEnded,
+      playerStats: lastResult.playerStats,
+      nrpsResult: lastResult.nrpsResult,
+      settlePayload: {
+        users: settleAddresses,
+        profitsOrLosses: settleProfitsOrLosses
+      }
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// Scales net profit (dollars) to 18-decimal wei string
+function scaleTo18Decimals(amount: number): string {
+  const isNegative = amount < 0;
+  const absVal = Math.abs(amount);
+  // Scale with 6 decimal places of precision, then pad with 12 zeros to make 18 decimals
+  const scaled = BigInt(Math.round(absVal * 1e6)) * (BigInt(10) ** BigInt(12));
+  return (isNegative ? -scaled : scaled).toString();
+}

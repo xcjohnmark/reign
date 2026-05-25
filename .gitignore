@@ -41,3 +41,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# REIGN Custom Ignores
+# planning & checklists
+task.md
+improvements.md
+improvement.md
+
+# testing scripts
+verifyPhase1.ts
+verifyPhase3.ts
+verifyPhase4.ts
+verifyEndToEnd.ts
+
+# hardhat compilation & cache
+contracts/artifacts/
+contracts/cache/
+contracts/types/
+
+# simulated database state
+src/data/gameState.json
+

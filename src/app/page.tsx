@@ -1,65 +1,1602 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState, useEffect } from 'react';
+import { 
+  Coins, Users, Calendar, Play, RotateCcw, AlertTriangle, 
+  ShieldCheck, Download, Award, Wallet, ArrowRight, 
+  CheckCircle, TrendingUp, Info, LogOut 
+} from 'lucide-react';
+import seedData from '../data/seedData.json';
+import { isValidFormation, Player } from '../utils/fplScoring';
+
+// ABIs for real contract interactions
+const mockUsdtAbi = [
+  {
+    inputs: [
+      { name: "account", type: "address" }
+    ],
+    name: "balanceOf",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    name: "approve",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    name: "faucet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  }
+];
+
+const reignPoolAbi = [
+  {
+    inputs: [
+      { name: "user", type: "address" }
+    ],
+    name: "userDeposits",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "user", type: "address" }
+    ],
+    name: "withdrawableProfit",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "epochEnded",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "deposit",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "amount", type: "uint256" }
+    ],
+    name: "withdrawProfit",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "withdrawPrincipal",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "users", type: "address[]" },
+      { name: "profitsOrLosses", type: "int256[]" }
+    ],
+    name: "settleMatchday",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  }
+];
+
+// Contract Addresses (Hardhat localhost defaults)
+const USDT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const POOL_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+
+
+export default function Dashboard() {
+  // Navigation
+  const [activeTab, setActiveTab] = useState<'squad' | 'simulator' | 'leaderboard'>('squad');
+
+  // Web3 Connection State
+  const [wallet, setWallet] = useState<string>('');
+  const [walletType, setWalletType] = useState<'mock' | 'real' | null>(null);
+  const [txLoading, setTxLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // On-Chain Balances
+  const [balanceUSDT, setBalanceUSDT] = useState<number>(0);
+  const [deposited, setDeposited] = useState<boolean>(false);
+  const [withdrawableProfit, setWithdrawableProfit] = useState<number>(0);
+  const [lockedPrincipal, setLockedPrincipal] = useState<number>(0);
+  const [epochEnded, setEpochEnded] = useState<boolean>(false);
+
+  // Tournament / Simulator State
+  const [currentMatchday, setCurrentMatchday] = useState<number>(1);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [standings, setStandings] = useState<any[]>([]);
+  const [activeCountries, setActiveCountries] = useState<string[]>([]);
+  const [matchdayHistory, setMatchdayHistory] = useState<any[]>([]);
+  const [simulationLoading, setSimulationLoading] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+
+  // Squad Builder State
+  const [starters, setStarters] = useState<(number | null)[]>(Array(11).fill(null)); // 11 slots
+  const [subs, setSubs] = useState<(number | null)[]>(Array(4).fill(null)); // 4 slots
+  const [captainId, setCaptainId] = useState<number | null>(null);
+  const [viceCaptainId, setViceCaptainId] = useState<number | null>(null);
+
+  // Market Filters
+  const [marketPosition, setMarketPosition] = useState<string>('ALL');
+  const [marketSearch, setMarketSearch] = useState<string>('');
+  const [marketCountry, setMarketCountry] = useState<string>('ALL');
+  const [marketSort, setMarketSort] = useState<'rating' | 'price'>('rating');
+
+  // Modal / Selection states
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<{ type: 'starter' | 'sub'; index: number } | null>(null);
+
+  // Players list
+  const allPlayers = seedData.players as Player[];
+  const playerMap = new Map(allPlayers.map(p => [p.id, p]));
+
+  // Auto-connect mock wallet if saved
+  useEffect(() => {
+    const savedWallet = localStorage.getItem('reign_wallet');
+    const savedType = localStorage.getItem('reign_wallet_type');
+    if (savedWallet && savedType) {
+      setWallet(savedWallet);
+      setWalletType(savedType as 'mock' | 'real');
+    }
+  }, []);
+
+  // Fetch data when wallet connects
+  useEffect(() => {
+    if (wallet) {
+      loadWeb3State();
+      loadSquadState();
+      loadSimulatorState();
+    }
+  }, [wallet, walletType]);
+
+  // Load general simulator state periodically
+  useEffect(() => {
+    loadSimulatorState();
+  }, [currentMatchday]);
+
+  // --- API / Web3 Integrations ---
+
+  const loadWeb3State = async () => {
+    if (!wallet) return;
+    if (walletType === 'mock') {
+      try {
+        const res = await fetch(`/api/web3?wallet=${wallet}`);
+        const data = await res.json();
+        if (data.onChainState) {
+          setBalanceUSDT(data.onChainState.usdtBalance);
+          setDeposited(data.onChainState.deposited);
+          setWithdrawableProfit(data.onChainState.withdrawableProfit);
+          setLockedPrincipal(data.onChainState.lockedPrincipal);
+        }
+      } catch (err) {
+        console.error("Failed to load mock web3 state", err);
+      }
+    } else {
+      // Real Web3 Mode
+      try {
+        const { createPublicClient, http } = await import('viem');
+        const publicClient = createPublicClient({
+          transport: http("http://127.0.0.1:8545") // localhost Node
+        });
+        
+        const formatDec = (val: bigint) => Number(val) / 1e18;
+
+        const balanceVal = await publicClient.readContract({
+          address: USDT_ADDRESS as `0x${string}`,
+          abi: mockUsdtAbi,
+          functionName: 'balanceOf',
+          args: [wallet as `0x${string}`]
+        }) as bigint;
+
+        const depVal = await publicClient.readContract({
+          address: POOL_ADDRESS as `0x${string}`,
+          abi: reignPoolAbi,
+          functionName: 'userDeposits',
+          args: [wallet as `0x${string}`]
+        }) as bigint;
+
+        const profitVal = await publicClient.readContract({
+          address: POOL_ADDRESS as `0x${string}`,
+          abi: reignPoolAbi,
+          functionName: 'withdrawableProfit',
+          args: [wallet as `0x${string}`]
+        }) as bigint;
+
+        const endVal = await publicClient.readContract({
+          address: POOL_ADDRESS as `0x${string}`,
+          abi: reignPoolAbi,
+          functionName: 'epochEnded'
+        }) as boolean;
+
+        setBalanceUSDT(formatDec(balanceVal));
+        setDeposited(depVal > 0n);
+        setLockedPrincipal(formatDec(depVal));
+        setWithdrawableProfit(formatDec(profitVal));
+        setEpochEnded(endVal);
+      } catch (err) {
+        console.warn("Real Web3 contracts check failed, make sure local Hardhat node is running", err);
+      }
+    }
+  };
+
+  const loadSquadState = async () => {
+    if (!wallet) return;
+    try {
+      const res = await fetch(`/api/squad?wallet=${wallet}`);
+      const data = await res.json();
+      if (data.squad) {
+        const { starters: s, subs: b, captainId: cap, viceCaptainId: vice } = data.squad;
+        // Pad starters and subs to match lengths
+        setStarters(s.map((id: number) => id || null));
+        setSubs(b.map((id: number) => id || null));
+        setCaptainId(cap);
+        setViceCaptainId(vice);
+      } else {
+        setStarters(Array(11).fill(null));
+        setSubs(Array(4).fill(null));
+        setCaptainId(null);
+        setViceCaptainId(null);
+      }
+    } catch (err) {
+      console.error("Failed to load squad state", err);
+    }
+  };
+
+  const loadSimulatorState = async () => {
+    try {
+      const res = await fetch('/api/simulator');
+      const data = await res.json();
+      setCurrentMatchday(data.currentMatchday);
+      setEpochEnded(data.epochEnded);
+      setLeaderboard(data.leaderboard || []);
+      setStandings(data.standings || []);
+      setActiveCountries(data.activeCountries || []);
+      setMatchdayHistory(data.matchdayHistory || []);
+    } catch (err) {
+      console.error("Failed to load simulator state", err);
+    }
+  };
+
+  // Connect Mock Wallet
+  const connectMockWallet = () => {
+    const mockAddr = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".toLowerCase(); // Standard Hardhat Account #0
+    setWallet(mockAddr);
+    setWalletType('mock');
+    localStorage.setItem('reign_wallet', mockAddr);
+    localStorage.setItem('reign_wallet_type', 'mock');
+    setSuccessMsg("Connected to Mock Wallet successfully");
+    setErrorMsg('');
+  };
+
+  // Connect MetaMask/OKX Wallet
+  const connectRealWallet = async () => {
+    if (typeof window === 'undefined' || !(window as any).ethereum) {
+      setErrorMsg("No EVM wallet detected. Please install OKX Wallet or MetaMask.");
+      return;
+    }
+    try {
+      const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts.length > 0) {
+        const addr = accounts[0].toLowerCase();
+        setWallet(addr);
+        setWalletType('real');
+        localStorage.setItem('reign_wallet', addr);
+        localStorage.setItem('reign_wallet_type', 'real');
+        setSuccessMsg("Connected to wallet: " + addr.substring(0, 6) + "..." + addr.substring(38));
+        setErrorMsg('');
+      }
+    } catch (err: any) {
+      setErrorMsg("Wallet connection failed: " + err.message);
+    }
+  };
+
+  // Disconnect
+  const disconnectWallet = () => {
+    setWallet('');
+    setWalletType(null);
+    localStorage.removeItem('reign_wallet');
+    localStorage.removeItem('reign_wallet_type');
+    setSuccessMsg("Disconnected successfully");
+  };
+
+  // Web3 Mock Action Trigger
+  const triggerMockAction = async (action: string, amount?: number) => {
+    if (walletType !== 'mock') return;
+    setTxLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch('/api/web3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: wallet, action, amount })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setBalanceUSDT(data.onChainState.usdtBalance);
+      setDeposited(data.onChainState.deposited);
+      setWithdrawableProfit(data.onChainState.withdrawableProfit);
+      setLockedPrincipal(data.onChainState.lockedPrincipal);
+      setSuccessMsg(`Mock ${action} executed successfully!`);
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setTxLoading(false);
+    }
+  };
+
+  // On-Chain Real Web3 Actions
+  const triggerRealAction = async (action: string, amountVal?: number) => {
+    if (walletType !== 'real') return;
+    setTxLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const { createWalletClient, custom, parseUnits } = await import('viem');
+      const walletClient = createWalletClient({
+        chain: {
+          id: 31337, // Localhost Node
+          name: "Localhost",
+          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+          rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } }
+        },
+        transport: custom((window as any).ethereum)
+      });
+
+      if (action === "faucet") {
+        // Call Faucet function on USDT contract
+        const faucetAmount = parseUnits("100", 18);
+        const hash = await walletClient.writeContract({
+          address: USDT_ADDRESS as `0x${string}`,
+          abi: mockUsdtAbi,
+          functionName: 'faucet',
+          args: [wallet as `0x${string}`, faucetAmount],
+          account: wallet as `0x${string}`
+        });
+        setSuccessMsg(`Faucet transaction sent! Hash: ${hash}`);
+      } else if (action === "deposit") {
+        // 1. Approve 10 USDT
+        const approveAmount = parseUnits("10", 18);
+        const appHash = await walletClient.writeContract({
+          address: USDT_ADDRESS as `0x${string}`,
+          abi: mockUsdtAbi,
+          functionName: 'approve',
+          args: [POOL_ADDRESS as `0x${string}`, approveAmount],
+          account: wallet as `0x${string}`
+        });
+        
+        setSuccessMsg(`Approval sent! Processing deposit...`);
+        // Wait briefly for block confirmation in localhost
+        await new Promise(r => setTimeout(r, 2000));
+
+        // 2. Deposit
+        const depHash = await walletClient.writeContract({
+          address: POOL_ADDRESS as `0x${string}`,
+          abi: reignPoolAbi,
+          functionName: 'deposit',
+          account: wallet as `0x${string}`
+        });
+        setSuccessMsg(`Deposit successful! Hash: ${depHash}`);
+      } else if (action === "withdrawProfit") {
+        const withdrawAmount = parseUnits((amountVal || 5.0).toString(), 18);
+        const hash = await walletClient.writeContract({
+          address: POOL_ADDRESS as `0x${string}`,
+          abi: reignPoolAbi,
+          functionName: 'withdrawProfit',
+          args: [withdrawAmount],
+          account: wallet as `0x${string}`
+        });
+        setSuccessMsg(`Profit withdrawal successful! Hash: ${hash}`);
+      } else if (action === "withdrawPrincipal") {
+        const hash = await walletClient.writeContract({
+          address: POOL_ADDRESS as `0x${string}`,
+          abi: reignPoolAbi,
+          functionName: 'withdrawPrincipal',
+          account: wallet as `0x${string}`
+        });
+        setSuccessMsg(`Principal successfully refunded! Hash: ${hash}`);
+      }
+
+      // Reload state after delay
+      setTimeout(loadWeb3State, 2000);
+    } catch (err: any) {
+      setErrorMsg("Transaction failed: " + err.message);
+    } finally {
+      setTxLoading(false);
+    }
+  };
+
+  // Dispatch Action (Mock or Real Web3)
+  const dispatchAction = (action: string, amount?: number) => {
+    if (walletType === 'mock') {
+      triggerMockAction(action, amount);
+    } else {
+      triggerRealAction(action, amount);
+    }
+  };
+
+  // --- Squad Management ---
+
+  // Squad Stats & Checks
+  const selectedStartersFull = starters.map(id => id ? playerMap.get(id) : null).filter(Boolean) as Player[];
+  const selectedSubsFull = subs.map(id => id ? playerMap.get(id) : null).filter(Boolean) as Player[];
+  const fullSquad = [...selectedStartersFull, ...selectedSubsFull];
+
+  const totalSpent = fullSquad.reduce((sum, p) => sum + p.price, 0);
+  const remainingBudget = 100.0 - totalSpent;
+  const squadSize = fullSquad.length;
+
+  const countryCounts: Record<string, number> = {};
+  for (const p of fullSquad) {
+    countryCounts[p.countryId] = (countryCounts[p.countryId] || 0) + 1;
+  }
+
+  // Validations
+  const isBudgetValid = remainingBudget >= 0;
+  const isSquadSizeValid = squadSize === 15;
+  const isFormationValid = isValidFormation(selectedStartersFull);
+  
+  let countryLimitExceeded = false;
+  for (const cId in countryCounts) {
+    if (countryCounts[cId] > 3) {
+      countryLimitExceeded = true;
+    }
+  }
+
+  const isCaptainValid = captainId !== null && starters.includes(captainId);
+  const isViceCaptainValid = viceCaptainId !== null && starters.includes(viceCaptainId) && viceCaptainId !== captainId;
+
+  const isSquadSaveable = 
+    isBudgetValid && 
+    isSquadSizeValid && 
+    isFormationValid && 
+    !countryLimitExceeded && 
+    isCaptainValid && 
+    isViceCaptainValid &&
+    deposited;
+
+  // Add player to current selected slot
+  const handleSelectPlayer = (player: Player) => {
+    if (!selectedSlotIndex) return;
+
+    // Check if player is already in squad (in another slot)
+    const isAlreadySelected = starters.includes(player.id) || subs.includes(player.id);
+    if (isAlreadySelected) {
+      setErrorMsg(`${player.name} is already in your squad.`);
+      return;
+    }
+
+    if (selectedSlotIndex.type === 'starter') {
+      const newStarters = [...starters];
+      newStarters[selectedSlotIndex.index] = player.id;
+      setStarters(newStarters);
+    } else {
+      const newSubs = [...subs];
+      newSubs[selectedSlotIndex.index] = player.id;
+      setSubs(newSubs);
+    }
+
+    setSelectedSlotIndex(null);
+    setErrorMsg('');
+  };
+
+  // Remove player from slot
+  const handleRemovePlayer = (type: 'starter' | 'sub', index: number, id: number) => {
+    if (type === 'starter') {
+      const newStarters = [...starters];
+      newStarters[index] = null;
+      setStarters(newStarters);
+      if (captainId === id) setCaptainId(null);
+      if (viceCaptainId === id) setViceCaptainId(null);
+    } else {
+      const newSubs = [...subs];
+      newSubs[index] = null;
+      setSubs(newSubs);
+    }
+  };
+
+  // Set Captain or Vice-Captain
+  const handleSetRole = (role: 'captain' | 'vice', id: number) => {
+    if (role === 'captain') {
+      setCaptainId(id);
+      if (viceCaptainId === id) setViceCaptainId(null);
+    } else {
+      setViceCaptainId(id);
+      if (captainId === id) setCaptainId(null);
+    }
+  };
+
+  // Cryptographically Sign and Save Squad
+  const saveSquad = async () => {
+    if (!isSquadSaveable) return;
+    setTxLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const message = `Save REIGN squad for Matchday ${currentMatchday}: ${starters.join(",")}|${subs.join(",")}|${captainId}|${viceCaptainId}`;
+      let signature = "";
+
+      if (walletType === 'mock') {
+        // Generate mock signature
+        signature = `0xmock_signature_${wallet}_${Date.now()}`;
+      } else {
+        // Real Web3 Signature using MetaMask
+        signature = await (window as any).ethereum.request({
+          method: 'personal_sign',
+          params: [message, wallet]
+        });
+      }
+
+      const res = await fetch('/api/squad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: wallet,
+          squad: { starters, subs, captainId, viceCaptainId },
+          signature,
+          message
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSuccessMsg("Squad saved and locked successfully!");
+      loadSimulatorState();
+    } catch (err: any) {
+      setErrorMsg("Failed to save squad: " + err.message);
+    } finally {
+      setTxLoading(false);
+    }
+  };
+
+  // --- Tournament & Simulator Actions ---
+
+  // Trigger Matchday Simulation
+  const simulateCurrentMatchday = async () => {
+    setSimulationLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch('/api/simulator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSimulationResult(data);
+      setSuccessMsg(`Matchday ${data.simulatedMatchday} simulated successfully!`);
+      loadSimulatorState();
+      loadWeb3State(); // reload wallet to get new rewards/ledger
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setSimulationLoading(false);
+    }
+  };
+
+  // Submit settleMatchday transaction on-chain (Admin)
+  const settleMatchdayOnChain = async () => {
+    if (!simulationResult || !simulationResult.settlePayload) return;
+    setTxLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const { users, profitsOrLosses } = simulationResult.settlePayload;
+
+      if (walletType === 'mock') {
+        // Mock Settle
+        // Since mock handles updating withdrawableProfit inside simulateMatchday API, we just mark it done!
+        setSuccessMsg("Matchday payouts successfully settled in mock ledger!");
+        setSimulationResult(null);
+      } else {
+        // Real Web3 Payout Settle
+        const { createWalletClient, custom } = await import('viem');
+        const walletClient = createWalletClient({
+          chain: {
+            id: 31337,
+            name: "Localhost",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } }
+          },
+          transport: custom((window as any).ethereum)
+        });
+
+        // Convert profits/losses back to BigInt values
+        const parsedProfits = profitsOrLosses.map((val: string) => BigInt(val));
+
+        const hash = await walletClient.writeContract({
+          address: POOL_ADDRESS as `0x${string}`,
+          abi: reignPoolAbi,
+          functionName: 'settleMatchday',
+          args: [users as `0x${string}[]`, parsedProfits],
+          account: wallet as `0x${string}`
+        });
+
+        setSuccessMsg(`On-chain matchday payouts settled! Hash: ${hash}`);
+        setSimulationResult(null);
+        setTimeout(loadWeb3State, 2000);
+      }
+    } catch (err: any) {
+      setErrorMsg("Settlement transaction failed: " + err.message);
+    } finally {
+      setTxLoading(false);
+    }
+  };
+
+  // Reset Tournament
+  const resetTournament = async () => {
+    if (!window.confirm("Are you sure you want to reset the tournament to Matchday 1? This will wipe all simulator history and rankings.")) return;
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch('/api/simulator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setSuccessMsg("Tournament successfully reset!");
+      setSimulationResult(null);
+      setStarters(Array(11).fill(null));
+      setSubs(Array(4).fill(null));
+      setCaptainId(null);
+      setViceCaptainId(null);
+      loadSimulatorState();
+      setTimeout(loadWeb3State, 500);
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    }
+  };
+
+  // --- Filtering player lists ---
+  const filteredPlayers = allPlayers.filter(p => {
+    if (marketPosition !== 'ALL' && p.position !== marketPosition) return false;
+    if (marketCountry !== 'ALL' && p.countryId !== marketCountry) return false;
+    if (marketSearch && !p.name.toLowerCase().includes(marketSearch.toLowerCase())) return false;
+    return true;
+  });
+
+  filteredPlayers.sort((a, b) => {
+    if (marketSort === 'rating') return b.rating - a.rating;
+    return b.price - a.price;
+  });
+
+  const getPositionName = (pos: string) => {
+    switch (pos) {
+      case 'GK': return 'Goalkeeper';
+      case 'DEF': return 'Defender';
+      case 'MID': return 'Midfielder';
+      case 'FWD': return 'Forward';
+      default: return '';
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex-1 bg-black text-neutral-100 font-sans flex flex-col min-h-screen">
+      {/* 1. Sleek Header */}
+      <header className="border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-tr from-[#00ff55] to-emerald-400 p-2 rounded-lg text-black font-extrabold flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <Award className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black tracking-wider bg-gradient-to-r from-neutral-50 via-neutral-100 to-emerald-400 bg-clip-text text-transparent">REIGN</h1>
+            <p className="text-xs text-neutral-500 font-medium tracking-widest">WEB3 FANTASY WORLD CUP</p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Network and Wallet Bar */}
+        <div className="flex items-center gap-4">
+          {wallet && (
+            <div className="hidden sm:flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-1 text-xs">
+              <span className="w-2 h-2 rounded-full bg-[#00ff55] animate-pulse"></span>
+              <span className="text-neutral-400 font-semibold uppercase tracking-wider">X Layer {walletType === 'mock' ? 'Simulated' : 'Testnet'}</span>
+            </div>
+          )}
+
+          {wallet ? (
+            <div className="flex items-center gap-3 bg-neutral-900/60 backdrop-blur border border-neutral-800/80 rounded-full py-1 pl-4 pr-1">
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-neutral-500 tracking-wider">BALANCE</p>
+                <p className="text-xs font-black text-neutral-200">${balanceUSDT.toFixed(2)} USDT</p>
+              </div>
+              <div className="bg-neutral-950 px-3 py-1.5 rounded-full border border-neutral-800 flex items-center gap-2">
+                <Wallet className="w-3.5 h-3.5 text-[#00ff55]" />
+                <span className="text-xs font-mono font-bold text-neutral-300">
+                  {wallet.substring(0, 6)}...{wallet.substring(38)}
+                </span>
+                <button 
+                  onClick={disconnectWallet} 
+                  className="hover:text-red-500 transition-colors p-0.5 ml-1"
+                  title="Disconnect Wallet"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button 
+                onClick={connectMockWallet} 
+                className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 text-neutral-300"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-neutral-400" />
+                Mock Sign-In
+              </button>
+              <button 
+                onClick={connectRealWallet} 
+                className="bg-[#00ff55] hover:bg-[#02e04c] text-black font-extrabold transition px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                Connect Wallet
+              </button>
+            </div>
+          )}
         </div>
-      </main>
+      </header>
+
+      {/* Main Container */}
+      <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6">
+        
+        {/* Status / Message Banners */}
+        {errorMsg && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-bold text-red-500">Error Encountered</h4>
+              <p className="text-xs text-red-400/90 mt-0.5 leading-relaxed">{errorMsg}</p>
+            </div>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-bold text-emerald-400">Success</h4>
+              <p className="text-xs text-emerald-300/90 mt-0.5 leading-relaxed">{successMsg}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Not Connected Screen */}
+        {!wallet ? (
+          <div className="flex-1 flex items-center justify-center py-20">
+            <div className="max-w-md w-full bg-neutral-950 border border-neutral-900 rounded-3xl p-8 text-center flex flex-col items-center gap-6 shadow-2xl">
+              <div className="bg-neutral-900 border border-neutral-800 p-4 rounded-full text-[#00ff55] animate-pulse">
+                <Coins className="w-10 h-10" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-neutral-100">Deploy Capital. Build Reign.</h2>
+                <p className="text-neutral-500 text-sm mt-2 leading-relaxed">
+                  Staking HCLP capital ($8 refundable principal + $2 entry fee) unlocks squad compilation and matchday simulations with rewards redistributed via the Z-Score Softmax (NRPS) engine on X Layer.
+                </p>
+              </div>
+              
+              <div className="flex flex-col gap-2 w-full">
+                <button 
+                  onClick={connectRealWallet} 
+                  className="w-full bg-[#00ff55] hover:bg-[#02e04c] text-black font-black transition py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                >
+                  <Wallet className="w-4 h-4" />
+                  Connect OKX Wallet / MetaMask
+                </button>
+                <div className="flex items-center my-2 text-neutral-600">
+                  <hr className="flex-1 border-neutral-800" />
+                  <span className="px-3 text-[10px] font-bold tracking-widest uppercase">OR</span>
+                  <hr className="flex-1 border-neutral-800" />
+                </div>
+                <button 
+                  onClick={connectMockWallet} 
+                  className="w-full bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 text-neutral-300 font-bold transition py-3 rounded-xl text-sm flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4 text-neutral-400" />
+                  Sign In with Mock Wallet (No Install Required)
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Connected Dashboard */
+          <>
+            {/* 2. Navigation Tabs */}
+            <div className="flex items-center justify-between bg-neutral-950 border border-neutral-900 rounded-2xl p-1.5">
+              <div className="flex gap-1.5 flex-1 md:flex-initial">
+                <button 
+                  onClick={() => setActiveTab('squad')} 
+                  className={`flex-1 md:flex-initial px-6 py-2.5 rounded-xl text-xs font-black tracking-wide uppercase transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === 'squad' ? 'bg-[#00ff55] text-black shadow-lg shadow-emerald-500/10' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'}`}
+                >
+                  <Users className="w-4 h-4" />
+                  Squad Builder
+                </button>
+                <button 
+                  onClick={() => setActiveTab('simulator')} 
+                  className={`flex-1 md:flex-initial px-6 py-2.5 rounded-xl text-xs font-black tracking-wide uppercase transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === 'simulator' ? 'bg-[#00ff55] text-black shadow-lg shadow-emerald-500/10' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'}`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  Matchday Simulator
+                </button>
+                <button 
+                  onClick={() => setActiveTab('leaderboard')} 
+                  className={`flex-1 md:flex-initial px-6 py-2.5 rounded-xl text-xs font-black tracking-wide uppercase transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === 'leaderboard' ? 'bg-[#00ff55] text-black shadow-lg shadow-emerald-500/10' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'}`}
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  Leaderboard & Ledger
+                </button>
+              </div>
+
+              {/* Reset Control */}
+              <button 
+                onClick={resetTournament} 
+                className="hidden md:flex items-center gap-2 text-xs font-bold text-neutral-500 hover:text-red-400 hover:bg-red-500/10 px-3.5 py-2 rounded-xl transition-all duration-200 border border-transparent hover:border-red-500/20"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset Tournament
+              </button>
+            </div>
+
+            {/* 3. Tab Contents */}
+            <div className="flex-1 flex flex-col min-h-0">
+              
+              {/* TAB 1: SQUAD BUILDER */}
+              {activeTab === 'squad' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start min-h-0">
+                  
+                  {/* Left Column: Pitch & Bench */}
+                  <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+                    
+                    {/* Budget & Registration Indicator */}
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                      
+                      {/* Budget Tracker */}
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="flex justify-between text-xs font-black text-neutral-400">
+                          <span>BUDGET SPENT</span>
+                          <span className={isBudgetValid ? 'text-[#00ff55]' : 'text-red-500'}>
+                            ${totalSpent.toFixed(1)}M / $100.0M
+                          </span>
+                        </div>
+                        <div className="w-full bg-neutral-900 h-2.5 rounded-full overflow-hidden border border-neutral-800">
+                          <div 
+                            className={`h-full transition-all duration-300 ${isBudgetValid ? 'bg-gradient-to-r from-emerald-500 to-[#00ff55]' : 'bg-red-500'}`} 
+                            style={{ width: `${Math.min(totalSpent, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Staking/Deposit check */}
+                      {!deposited ? (
+                        <button 
+                          onClick={() => dispatchAction('deposit')}
+                          disabled={txLoading}
+                          className="bg-gradient-to-r from-[#00ff55] to-emerald-400 hover:from-emerald-400 hover:to-[#00ff55] disabled:opacity-50 text-black font-black px-6 py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10 cursor-pointer self-center"
+                        >
+                          <Coins className="w-4 h-4" />
+                          STAKE $10 USDT ENTRY
+                        </button>
+                      ) : (
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 text-[#00ff55] rounded-2xl px-5 py-3 flex items-center gap-2 self-center text-xs font-bold">
+                          <ShieldCheck className="w-4.5 h-4.5" />
+                          Stake Locked & Entry Paid
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Football Pitch */}
+                    <div className="bg-gradient-to-b from-neutral-950 to-neutral-900 border border-neutral-900 rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between aspect-[1.3] shadow-2xl">
+                      {/* Pitch Layout Markings */}
+                      <div className="absolute inset-x-0 top-0 h-1/2 border-b border-neutral-800/40 pointer-events-none"></div>
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/4 aspect-square border border-neutral-800/40 rounded-full pointer-events-none"></div>
+                      
+                      {/* GK Position (1) */}
+                      <div className="flex justify-center">
+                        <PitchSlot 
+                          index={0} 
+                          position="GK" 
+                          playerId={starters[0]} 
+                          onRemove={(id) => handleRemovePlayer('starter', 0, id)}
+                          onSelect={() => setSelectedSlotIndex({ type: 'starter', index: 0 })}
+                          captainId={captainId}
+                          viceCaptainId={viceCaptainId}
+                          onSetRole={handleSetRole}
+                          playerMap={playerMap}
+                        />
+                      </div>
+
+                      {/* DEF Position (4) */}
+                      <div className="flex justify-around">
+                        {[1, 2, 3, 4].map(idx => (
+                          <PitchSlot 
+                            key={idx}
+                            index={idx} 
+                            position="DEF" 
+                            playerId={starters[idx]} 
+                            onRemove={(id) => handleRemovePlayer('starter', idx, id)}
+                            onSelect={() => setSelectedSlotIndex({ type: 'starter', index: idx })}
+                            captainId={captainId}
+                            viceCaptainId={viceCaptainId}
+                            onSetRole={handleSetRole}
+                            playerMap={playerMap}
+                          />
+                        ))}
+                      </div>
+
+                      {/* MID Position (4) */}
+                      <div className="flex justify-around">
+                        {[5, 6, 7, 8].map(idx => (
+                          <PitchSlot 
+                            key={idx}
+                            index={idx} 
+                            position="MID" 
+                            playerId={starters[idx]} 
+                            onRemove={(id) => handleRemovePlayer('starter', idx, id)}
+                            onSelect={() => setSelectedSlotIndex({ type: 'starter', index: idx })}
+                            captainId={captainId}
+                            viceCaptainId={viceCaptainId}
+                            onSetRole={handleSetRole}
+                            playerMap={playerMap}
+                          />
+                        ))}
+                      </div>
+
+                      {/* FWD Position (2) */}
+                      <div className="flex justify-around px-20">
+                        {[9, 10].map(idx => (
+                          <PitchSlot 
+                            key={idx}
+                            index={idx} 
+                            position="FWD" 
+                            playerId={starters[idx]} 
+                            onRemove={(id) => handleRemovePlayer('starter', idx, id)}
+                            onSelect={() => setSelectedSlotIndex({ type: 'starter', index: idx })}
+                            captainId={captainId}
+                            viceCaptainId={viceCaptainId}
+                            onSetRole={handleSetRole}
+                            playerMap={playerMap}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bench Section (4 Subs) */}
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5">
+                      <h3 className="text-xs font-black tracking-wider text-neutral-500 mb-4 uppercase">Substitutes Bench (Ordered Left-to-Right)</h3>
+                      <div className="grid grid-cols-4 gap-4">
+                        {[0, 1, 2, 3].map(idx => {
+                          const pos = idx === 0 ? "GK" : idx === 1 ? "DEF" : idx === 2 ? "MID" : "FWD";
+                          return (
+                            <div key={idx} className="bg-neutral-900/50 rounded-2xl border border-neutral-900 p-3 flex flex-col items-center justify-center">
+                              <PitchSlot 
+                                index={idx} 
+                                position={pos} 
+                                playerId={subs[idx]} 
+                                onRemove={(id) => handleRemovePlayer('sub', idx, id)}
+                                onSelect={() => setSelectedSlotIndex({ type: 'sub', index: idx })}
+                                captainId={null}
+                                viceCaptainId={null}
+                                playerMap={playerMap}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Player Market / Selection Modal */}
+                  <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 lg:sticky lg:top-[90px] h-full lg:max-h-[calc(100vh-130px)] min-h-0">
+                    
+                    {/* Validation Panel */}
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col gap-4 flex-shrink-0">
+                      <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">Squad Validation</h3>
+                      
+                      <div className="flex flex-col gap-2 text-xs">
+                        <ValidationCheck label="Deposited & Registered" isValid={deposited} message="STAKE $10 required to save" />
+                        <ValidationCheck label="15 Players Drafted" isValid={isSquadSizeValid} message={`${squadSize} / 15 players selected`} />
+                        <ValidationCheck label="Under Budget ($100.0M)" isValid={isBudgetValid} message={`Remaining: $${remainingBudget.toFixed(1)}M`} />
+                        <ValidationCheck label="Starting Formation Valid" isValid={isFormationValid} message="Conforms to FPL rules (1 GK, 3+ DEF, 1+ FWD)" />
+                        <ValidationCheck label="Country Limit Check (Max 3)" isValid={!countryLimitExceeded} message="No more than 3 players from same country" />
+                        <ValidationCheck label="Captain Set" isValid={isCaptainValid} message="Select a starter as captain" />
+                        <ValidationCheck label="Vice-Captain Set" isValid={isViceCaptainValid} message="Select a different starter as vice-captain" />
+                      </div>
+
+                      <button 
+                        onClick={saveSquad}
+                        disabled={!isSquadSaveable || txLoading}
+                        className="w-full bg-[#00ff55] hover:bg-[#02e04c] disabled:opacity-40 disabled:hover:bg-[#00ff55] disabled:cursor-not-allowed text-black font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2 transition duration-200 mt-2 shadow-lg shadow-emerald-500/10 cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4.5 h-4.5" />
+                        {txLoading ? "SAVING..." : "LOCK AND SIGN SQUAD"}
+                      </button>
+                    </div>
+
+                    {/* Market / Selector panel */}
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col min-h-[400px] lg:min-h-0 flex-1 overflow-hidden">
+                      <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                        <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">
+                          {selectedSlotIndex ? `SELECT ${getPositionName(selectedSlotIndex.type === 'starter' ? starters[selectedSlotIndex.index] ? playerMap.get(starters[selectedSlotIndex.index]!)?.position || '' : selectedSlotIndex.index === 0 ? 'GK' : selectedSlotIndex.index <= 4 ? 'DEF' : selectedSlotIndex.index <= 8 ? 'MID' : 'FWD' : selectedSlotIndex.index === 0 ? 'GK' : selectedSlotIndex.index === 1 ? 'DEF' : selectedSlotIndex.index === 2 ? 'MID' : 'FWD')}` : "PLAYER MARKET"}
+                        </h3>
+                        {selectedSlotIndex && (
+                          <button 
+                            onClick={() => setSelectedSlotIndex(null)}
+                            className="text-xs text-neutral-500 hover:text-neutral-300 font-bold"
+                          >
+                            Cancel selection
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Filters */}
+                      <div className="flex flex-col gap-2 flex-shrink-0 mb-3">
+                        <input 
+                          type="text" 
+                          placeholder="Search player name..." 
+                          value={marketSearch}
+                          onChange={(e) => setMarketSearch(e.target.value)}
+                          className="bg-neutral-900 border border-neutral-850 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-neutral-700 w-full text-neutral-200 font-medium"
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* Position Filter */}
+                          {!selectedSlotIndex && (
+                            <select 
+                              value={marketPosition} 
+                              onChange={(e) => setMarketPosition(e.target.value)}
+                              className="bg-neutral-900 border border-neutral-850 rounded-xl px-3 py-2 text-xs focus:outline-none text-neutral-300 font-medium"
+                            >
+                              <option value="ALL">All Positions</option>
+                              <option value="GK">Goalkeepers</option>
+                              <option value="DEF">Defenders</option>
+                              <option value="MID">Midfielders</option>
+                              <option value="FWD">Forwards</option>
+                            </select>
+                          )}
+                          
+                          {/* Sort */}
+                          <select 
+                            value={marketSort} 
+                            onChange={(e) => setMarketSort(e.target.value as any)}
+                            className={`bg-neutral-900 border border-neutral-850 rounded-xl px-3 py-2 text-xs focus:outline-none text-neutral-300 font-medium ${selectedSlotIndex ? 'col-span-2' : ''}`}
+                          >
+                            <option value="rating">Sort by Rating</option>
+                            <option value="price">Sort by Price</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Player List */}
+                      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
+                        {filteredPlayers
+                          .filter(p => {
+                            if (!selectedSlotIndex) return true;
+                            // Enforce position constraint for the selected slot
+                            const slotIndex = selectedSlotIndex.index;
+                            const slotType = selectedSlotIndex.type;
+                            let targetPos = "";
+                            if (slotType === 'starter') {
+                              targetPos = slotIndex === 0 ? 'GK' : slotIndex <= 4 ? 'DEF' : slotIndex <= 8 ? 'MID' : 'FWD';
+                            } else {
+                              targetPos = slotIndex === 0 ? 'GK' : slotIndex === 1 ? 'DEF' : slotIndex === 2 ? 'MID' : 'FWD';
+                            }
+                            return p.position === targetPos;
+                          })
+                          .map(player => {
+                            const isAdded = starters.includes(player.id) || subs.includes(player.id);
+                            const country = seedData.countries.find(c => c.id === player.countryId);
+
+                            return (
+                              <div 
+                                key={player.id} 
+                                className={`bg-neutral-900/40 border border-neutral-900 rounded-xl p-3 flex items-center justify-between transition-all hover:bg-neutral-900/80 ${isAdded ? 'opacity-40' : ''}`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <span className="text-xl">{country?.flag || '🏳️'}</span>
+                                  <div>
+                                    <h4 className="text-xs font-bold text-neutral-200">{player.name}</h4>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[10px] bg-neutral-850 text-neutral-400 px-1.5 py-0.5 rounded font-black tracking-wider">{player.position}</span>
+                                      <span className="text-[10px] text-neutral-500 font-bold">{country?.name}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-3.5">
+                                  <div className="text-right">
+                                    <p className="text-xs font-black text-[#00ff55]">${player.price.toFixed(1)}M</p>
+                                    <p className="text-[10px] text-neutral-500 font-bold">Rating: {player.rating}</p>
+                                  </div>
+                                  
+                                  {selectedSlotIndex ? (
+                                    <button
+                                      disabled={isAdded}
+                                      onClick={() => handleSelectPlayer(player)}
+                                      className="bg-neutral-850 hover:bg-neutral-800 border border-neutral-800 disabled:opacity-50 text-neutral-300 font-black px-3 py-1.5 rounded-lg text-[10px] uppercase transition cursor-pointer"
+                                    >
+                                      Select
+                                    </button>
+                                  ) : (
+                                    <button
+                                      disabled
+                                      className="opacity-0 w-0 h-0"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                        {filteredPlayers.length === 0 && (
+                          <div className="py-10 text-center text-xs text-neutral-500 font-bold">
+                            No players matched filters
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: TOURNAMENT SIMULATOR */}
+              {activeTab === 'simulator' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start min-h-0">
+                  
+                  {/* Left Column: Matchday simulation panel */}
+                  <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+                    
+                    {/* Big Action Panel */}
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 shadow-xl">
+                      <div>
+                        <h2 className="text-lg font-black tracking-wider text-neutral-200">
+                          {epochEnded ? "TOURNAMENT COMPLETE" : `MATCHDAY ${currentMatchday} SIMULATION`}
+                        </h2>
+                        <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                          {epochEnded ? "All 7 matchdays have been simulated and payouts settled. Withdraw your profits and principal from the Ledger tab." : "Simulate games for this matchday, calculate player FPL scores, auto-substitutions, and calculate Softmax payouts."}
+                        </p>
+                      </div>
+
+                      {!epochEnded && (
+                        <div className="flex-shrink-0 flex items-center gap-3">
+                          {simulationResult ? (
+                            <button 
+                              onClick={settleMatchdayOnChain}
+                              disabled={txLoading}
+                              className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-blue-500 hover:to-cyan-400 text-white font-black px-6 py-3.5 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/15 cursor-pointer"
+                            >
+                              <ShieldCheck className="w-4.5 h-4.5" />
+                              SETTLE PAYOUTS ON X LAYER
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={simulateCurrentMatchday}
+                              disabled={simulationLoading}
+                              className="bg-[#00ff55] hover:bg-[#02e04c] text-black font-black px-6 py-3.5 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer"
+                            >
+                              <Play className="w-4.5 h-4.5 fill-black" />
+                              {simulationLoading ? "SIMULATING..." : "SIMULATE MATCHES"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Simulation results card */}
+                    {simulationResult ? (
+                      <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col gap-5">
+                        <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+                          <h3 className="text-xs font-black tracking-wider text-neutral-400 uppercase">Matchday {simulationResult.simulatedMatchday} Payout Details</h3>
+                          <span className="text-[10px] bg-neutral-900 text-neutral-400 px-2 py-0.5 rounded-full border border-neutral-850 font-bold uppercase">Pending Settlement</span>
+                        </div>
+
+                        {/* NRPS User Payout Results */}
+                        <div className="flex flex-col gap-3">
+                          {simulationResult.nrpsResult?.userResults
+                            .filter((r: any) => r.userId === wallet.toLowerCase())
+                            .map((res: any) => (
+                              <div key={res.userId} className="bg-neutral-900/50 border border-neutral-900 rounded-2xl p-4 grid grid-cols-3 gap-4">
+                                <div className="text-center border-r border-neutral-850">
+                                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">SQUAD SCORE</p>
+                                  <p className="text-lg font-black text-neutral-200 mt-1">{res.score} pts</p>
+                                </div>
+                                <div className="text-center border-r border-neutral-850">
+                                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Z-SCORE (TANH)</p>
+                                  <p className="text-lg font-black text-blue-400 mt-1">{res.zScore >= 0 ? '+' : ''}{res.zScore.toFixed(2)}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">NET PAYOUT</p>
+                                  <p className={`text-lg font-black mt-1 ${res.netProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
+                                    {res.netProfit >= 0 ? '+' : ''}${res.netProfit.toFixed(2)} USDT
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+
+                          {/* Detail summary */}
+                          <div className="bg-neutral-900/30 rounded-2xl p-4 flex flex-col gap-2 text-xs">
+                            <div className="flex justify-between text-neutral-500">
+                              <span>Redistribution Mean Score:</span>
+                              <span className="font-bold text-neutral-300">{simulationResult.nrpsResult?.mean.toFixed(1)} pts</span>
+                            </div>
+                            <div className="flex justify-between text-neutral-500">
+                              <span>Redistribution Std Dev:</span>
+                              <span className="font-bold text-neutral-300">{simulationResult.nrpsResult?.stdDev.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-neutral-500">
+                              <span>Total Matchday Pool:</span>
+                              <span className="font-bold text-neutral-300">${simulationResult.nrpsResult?.totalPool.toFixed(2)} USDT</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Show last matchday history or standings */
+                      <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col gap-4">
+                        <h3 className="text-xs font-black tracking-wider text-neutral-400 uppercase">Country Standings (Group Stage A-L)</h3>
+                        <div className="overflow-x-auto max-h-[350px]">
+                          <table className="w-full text-xs text-left text-neutral-400">
+                            <thead className="bg-neutral-900 text-[10px] font-bold tracking-wider text-neutral-500 uppercase">
+                              <tr>
+                                <th className="px-4 py-3">Rank</th>
+                                <th className="px-4 py-3">Country</th>
+                                <th className="px-4 py-3 text-center">W-D-L</th>
+                                <th className="px-4 py-3 text-center">GD</th>
+                                <th className="px-4 py-3 text-center">Points</th>
+                                <th className="px-4 py-3 text-center">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[...standings]
+                                .sort((a, b) => {
+                                  if (b.points !== a.points) return b.points - a.points;
+                                  return (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst);
+                                })
+                                .map((c, idx) => {
+                                  const country = seedData.countries.find(ct => ct.id === c.countryId);
+                                  const isActive = activeCountries.includes(c.countryId);
+                                  
+                                  return (
+                                    <tr key={c.countryId} className="border-b border-neutral-900/60 hover:bg-neutral-900/20">
+                                      <td className="px-4 py-3 font-mono font-bold">{idx + 1}</td>
+                                      <td className="px-4 py-3 flex items-center gap-2 font-bold text-neutral-200">
+                                        <span>{country?.flag}</span>
+                                        <span>{country?.name}</span>
+                                      </td>
+                                      <td className="px-4 py-3 text-center">{c.wins}-{c.draws}-{c.losses}</td>
+                                      <td className="px-4 py-3 text-center">{c.goalsFor - c.goalsAgainst}</td>
+                                      <td className="px-4 py-3 text-center font-bold text-neutral-200">{c.points}</td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
+                                          {isActive ? 'Active' : 'OUT'}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Column: Historical Matchdays list */}
+                  <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col gap-4">
+                      <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">Simulator Logs</h3>
+                      
+                      <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1">
+                        {matchdayHistory.map(h => (
+                          <div key={h.matchday} className="bg-neutral-900/40 border border-neutral-900 rounded-2xl p-4 flex flex-col gap-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-black text-neutral-200 uppercase">Matchday {h.matchday}</span>
+                              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-bold">Simulated</span>
+                            </div>
+                            
+                            {/* Payout sum */}
+                            <div className="text-xs text-neutral-500 flex justify-between">
+                              <span>User Score:</span>
+                              <span className="font-bold text-neutral-300">
+                                {h.nrpsResult?.userResults.find((r: any) => r.userId === wallet.toLowerCase())?.score || 0} pts
+                              </span>
+                            </div>
+                            <div className="text-xs text-neutral-500 flex justify-between">
+                              <span>Net Payout:</span>
+                              <span className={`font-bold ${h.nrpsResult?.userResults.find((r: any) => r.userId === wallet.toLowerCase())?.netProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
+                                ${h.nrpsResult?.userResults.find((r: any) => r.userId === wallet.toLowerCase())?.netProfit.toFixed(2) || '0.00'} USDT
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+
+                        {matchdayHistory.length === 0 && (
+                          <div className="py-10 text-center text-xs text-neutral-500 font-bold">
+                            No matchdays simulated yet.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: LEADERBOARD & LEDGER */}
+              {activeTab === 'leaderboard' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start min-h-0">
+                  
+                  {/* Left Column: Ledger / Staking overview */}
+                  <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-6 flex flex-col gap-6 shadow-xl">
+                      
+                      {/* Ledger Summary */}
+                      <div>
+                        <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase mb-4">HCLP Ledger Overview</h3>
+                        <div className="flex flex-col gap-3">
+                          <LedgerRow label="Staked Principal (Locked)" val={`$${lockedPrincipal.toFixed(2)} USDT`} desc="Fully refundable after MD 7" />
+                          <LedgerRow label="Withdrawable Profits" val={`$${withdrawableProfit.toFixed(2)} USDT`} desc="Earned via NRPS rankings" />
+                          <LedgerRow label="Wallet USDT Balance" val={`$${balanceUSDT.toFixed(2)} USDT`} desc="Mock standard stablecoin" />
+                        </div>
+                      </div>
+
+                      {/* Web3 Faucet & Withdrawal Buttons */}
+                      <div className="flex flex-col gap-2 border-t border-neutral-900 pt-5">
+                        {/* Faucet */}
+                        <button 
+                          onClick={() => dispatchAction('faucet')}
+                          disabled={txLoading}
+                          className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 disabled:opacity-50 text-neutral-200 font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition"
+                        >
+                          <Download className="w-4.5 h-4.5 text-neutral-400" />
+                          MINT FAUCET $100 USDT
+                        </button>
+                        
+                        {/* Withdraw Profit */}
+                        <button 
+                          onClick={() => dispatchAction('withdrawProfit')}
+                          disabled={txLoading || withdrawableProfit < 5.0}
+                          className="bg-gradient-to-r from-emerald-500 to-[#00ff55] disabled:opacity-30 disabled:from-neutral-900 disabled:to-neutral-900 disabled:text-neutral-500 disabled:border disabled:border-neutral-850 disabled:cursor-not-allowed text-black font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition shadow-lg shadow-emerald-500/5"
+                        >
+                          <TrendingUp className="w-4.5 h-4.5" />
+                          WITHDRAW PROFIT (MIN $5)
+                        </button>
+                        
+                        {/* Refund Principal */}
+                        <button 
+                          onClick={() => dispatchAction('withdrawPrincipal')}
+                          disabled={txLoading || !epochEnded || lockedPrincipal <= 0}
+                          className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-850 hover:border-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed text-neutral-200 font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition"
+                        >
+                          <RotateCcw className="w-4.5 h-4.5 text-neutral-400" />
+                          WITHDRAW LOCKED PRINCIPAL ($8)
+                        </button>
+                      </div>
+
+                      {/* Note */}
+                      <div className="bg-neutral-900/30 rounded-2xl p-4 flex gap-3 text-[10px] text-neutral-500 leading-relaxed">
+                        <Info className="w-4.5 h-4.5 text-neutral-500 flex-shrink-0 mt-0.5" />
+                        <p>
+                          The **Hybrid Capital Lock + Profit (HCLP)** ensures your $8 principal is safe and returned fully upon tournament completion. Only the $2 entry fee goes into matchday prize pools. Profits are claimable once they exceed the minimum limit ($5).
+                        </p>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Right Column: Leaderboard list */}
+                  <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col gap-4">
+                      <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">Competitor Leaderboard</h3>
+                      
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left text-neutral-400">
+                          <thead className="bg-neutral-900 text-[10px] font-bold tracking-wider text-neutral-500 uppercase">
+                            <tr>
+                              <th className="px-4 py-3">Rank</th>
+                              <th className="px-4 py-3">Competitor</th>
+                              <th className="px-4 py-3">Wallet</th>
+                              <th className="px-4 py-3 text-center">Locked Stake</th>
+                              <th className="px-4 py-3 text-center">Total Score</th>
+                              <th className="px-4 py-3 text-center">Net Profit</th>
+                              <th className="px-4 py-3 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {leaderboard.map((item, idx) => {
+                              const isMe = item.wallet === wallet.toLowerCase();
+                              return (
+                                <tr 
+                                  key={item.wallet} 
+                                  className={`border-b border-neutral-900/60 hover:bg-neutral-900/10 ${isMe ? 'bg-emerald-500/5 hover:bg-emerald-500/10' : ''}`}
+                                >
+                                  <td className="px-4 py-3 font-mono font-bold">
+                                    {idx + 1 === 1 ? '🥇' : idx + 1 === 2 ? '🥈' : idx + 1 === 3 ? '🥉' : idx + 1}
+                                  </td>
+                                  <td className={`px-4 py-3 font-bold ${isMe ? 'text-[#00ff55]' : 'text-neutral-200'}`}>
+                                    {item.name} {isMe ? '(You)' : ''}
+                                  </td>
+                                  <td className="px-4 py-3 font-mono text-neutral-500">
+                                    {item.wallet.substring(0, 6)}...{item.wallet.substring(36)}
+                                  </td>
+                                  <td className="px-4 py-3 text-center font-bold text-neutral-300">
+                                    ${(item.lockedCapital !== undefined ? item.lockedCapital : 8.0).toFixed(2)} USDT
+                                  </td>
+                                  <td className="px-4 py-3 text-center font-bold text-neutral-200">{item.totalScore} pts</td>
+                                  <td className={`px-4 py-3 text-center font-bold ${item.totalNetProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
+                                    {item.totalNetProfit >= 0 ? '+' : ''}${item.totalNetProfit.toFixed(2)} USDT
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${item.hasSquad ? 'bg-emerald-500/10 text-emerald-400' : 'bg-neutral-800 text-neutral-500'}`}>
+                                      {item.hasSquad ? 'Locked' : 'No Squad'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// Sub-components
+
+interface PitchSlotProps {
+  index: number;
+  position: string;
+  playerId: number | null;
+  onRemove: (id: number) => void;
+  onSelect: () => void;
+  captainId: number | null;
+  viceCaptainId: number | null;
+  onSetRole?: (role: 'captain' | 'vice', id: number) => void;
+  playerMap: Map<number, Player>;
+}
+
+function PitchSlot({ 
+  index, position, playerId, onRemove, onSelect, 
+  captainId, viceCaptainId, onSetRole, playerMap 
+}: PitchSlotProps) {
+  const p = playerId ? playerMap.get(playerId) : null;
+  const isCaptain = captainId === playerId;
+  const isViceCaptain = viceCaptainId === playerId;
+
+  if (p) {
+    const country = seedData.countries.find(c => c.id === p.countryId);
+    return (
+      <div className="relative flex flex-col items-center group w-16">
+        {/* Card */}
+        <div className="w-12 h-12 bg-neutral-900 border border-[#00ff55]/50 group-hover:border-[#00ff55] rounded-xl flex items-center justify-center font-black text-[#00ff55] shadow-lg shadow-emerald-500/10 relative transition duration-200">
+          <span className="text-lg">{country?.flag}</span>
+          
+          {/* Captain / Vice Captain Indicators */}
+          {isCaptain && (
+            <span className="absolute -top-1.5 -right-1.5 bg-[#00ff55] text-black w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-black border border-black shadow">C</span>
+          )}
+          {isViceCaptain && (
+            <span className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-black border border-black shadow">V</span>
+          )}
+
+          {/* Remove Button */}
+          <button 
+            onClick={() => onRemove(p.id)}
+            className="absolute -bottom-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[8px] font-bold opacity-0 group-hover:opacity-100 transition duration-150 shadow"
+            title="Remove Player"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Name Label */}
+        <p className="text-[9px] font-bold text-neutral-300 text-center w-20 truncate mt-1 bg-neutral-950/70 px-1 py-0.5 rounded border border-neutral-900 group-hover:border-neutral-800 transition">
+          {p.name.split(" ").pop()}
+        </p>
+        <p className="text-[8px] font-bold text-[#00ff55]">${p.price.toFixed(1)}M</p>
+
+        {/* Roles Setter Popover */}
+        {onSetRole && (
+          <div className="absolute top-full mt-1 bg-neutral-950 border border-neutral-850 p-1.5 rounded-lg flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition duration-150 z-10 shadow-xl pointer-events-none group-hover:pointer-events-auto">
+            <button 
+              onClick={() => onSetRole('captain', p.id)}
+              className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase transition ${isCaptain ? 'bg-[#00ff55] text-black' : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-neutral-200'}`}
+            >
+              C
+            </button>
+            <button 
+              onClick={() => onSetRole('vice', p.id)}
+              className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase transition ${isViceCaptain ? 'bg-blue-500 text-white' : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-neutral-200'}`}
+            >
+              V
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button 
+      onClick={onSelect}
+      className="w-12 h-12 bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-850 hover:border-neutral-700 border-dashed rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:text-[#00ff55] transition duration-200 cursor-pointer"
+    >
+      <span className="text-[10px] font-bold uppercase tracking-wider">{position}</span>
+      <span className="text-sm font-light mt-0.5">+</span>
+    </button>
+  );
+}
+
+interface ValidationCheckProps {
+  label: string;
+  isValid: boolean;
+  message: string;
+}
+
+function ValidationCheck({ label, isValid, message }: ValidationCheckProps) {
+  return (
+    <div className="flex items-start justify-between py-1.5 border-b border-neutral-900/50">
+      <span className="text-neutral-400 font-medium">{label}</span>
+      <div className="text-right">
+        <span className={`font-bold ${isValid ? 'text-[#00ff55]' : 'text-red-400'}`}>
+          {isValid ? 'Passed' : 'Failed'}
+        </span>
+        <p className="text-[9px] text-neutral-500 font-bold mt-0.5">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+interface LedgerRowProps {
+  label: string;
+  val: string;
+  desc: string;
+}
+
+function LedgerRow({ label, val, desc }: LedgerRowProps) {
+  return (
+    <div className="bg-neutral-900/50 border border-neutral-900 rounded-2xl p-4 flex items-center justify-between">
+      <div>
+        <h4 className="text-xs font-bold text-neutral-300">{label}</h4>
+        <p className="text-[9px] text-neutral-500 font-bold mt-0.5">{desc}</p>
+      </div>
+      <span className="text-sm font-black text-neutral-200">{val}</span>
     </div>
   );
 }

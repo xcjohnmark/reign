@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  hardhat-node:
+    build:
+      context: ./contracts
+      dockerfile: Dockerfile.hardhat
+    container_name: reign-hardhat-node
+    ports:
+      - "8545:8545"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: reign-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - reign-state:/app/src/data
+    depends_on:
+      - hardhat-node
+
+volumes:
+  reign-state:

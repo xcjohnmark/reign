@@ -1,7 +1,9 @@
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+import { defineConfig } from "hardhat/config";
+import hardhatEthers from "@nomicfoundation/hardhat-ethers";
+import hardhatToolboxMochaEthers from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 
-const config: HardhatUserConfig = {
+export default defineConfig({
+  plugins: [hardhatEthers, hardhatToolboxMochaEthers],
   solidity: {
     version: "0.8.24",
     settings: {
@@ -13,17 +15,18 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      type: "edr-simulated",
       chainId: 31337,
     },
     localhost: {
+      type: "http",
       url: "http://127.0.0.1:8545",
     },
     xlayerTestnet: {
+      type: "http",
       url: "https://testrpc.xlayer.tech",
       chainId: 195,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     }
   },
-};
-
-export default config;
+});
