@@ -1181,34 +1181,20 @@ export default function Dashboard() {
         setSuccessMsg("Matchday payouts successfully settled in mock ledger!");
         setSimulationResult(null);
       } else {
-        // Real Web3 Payout Settle
-        const { createWalletClient, custom } = await import('viem');
-        
-        const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
-        if (!provider) throw new Error("No wallet provider detected");
-
-        const walletClient = createWalletClient({
-          chain: {
-            id: 1952,
-            name: "X Layer Testnet",
-            nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
-            rpcUrls: { default: { http: ["https://testrpc.xlayer.tech/terigon"] } }
-          },
-          transport: custom(provider)
+        // Real Web3 Payout Settle (Delegated to server to execute as Contract Owner)
+        const res = await fetch('/api/settle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            users,
+            profitsOrLosses
+          })
         });
 
-        // Convert profits/losses back to BigInt values
-        const parsedProfits = profitsOrLosses.map((val: string) => BigInt(val));
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "On-chain settlement failed");
 
-        const hash = await walletClient.writeContract({
-          address: POOL_ADDRESS as `0x${string}`,
-          abi: reignPoolAbi,
-          functionName: 'settleMatchday',
-          args: [users as `0x${string}[]`, parsedProfits],
-          account: wallet as `0x${string}`
-        });
-
-        setSuccessMsg(`On-chain matchday payouts settled! Hash: ${hash}`);
+        setSuccessMsg(`On-chain matchday payouts settled! Hash: ${data.hash}`);
         setSimulationResult(null);
         setTimeout(loadWeb3State, 2000);
       }
