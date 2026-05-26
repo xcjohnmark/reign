@@ -1,249 +1,2670 @@
 {
   "countries": [
-    { "id": "MEX", "name": "Mexico", "flag": "🇲🇽", "group": "Group A" },
-    { "id": "RSA", "name": "South Africa", "flag": "🇿🇦", "group": "Group A" },
-    { "id": "KOR", "name": "South Korea", "flag": "🇰🇷", "group": "Group A" },
-    { "id": "CZE", "name": "Czechia", "flag": "🇨🇿", "group": "Group A" },
-    { "id": "CAN", "name": "Canada", "flag": "🇨🇦", "group": "Group B" },
-    { "id": "BIH", "name": "Bosnia and Herzegovina", "flag": "🇧🇦", "group": "Group B" },
-    { "id": "QAT", "name": "Qatar", "flag": "🇶🇦", "group": "Group B" },
-    { "id": "SUI", "name": "Switzerland", "flag": "🇨🇭", "group": "Group B" },
-    { "id": "BRA", "name": "Brazil", "flag": "🇧🇷", "group": "Group C" },
-    { "id": "MAR", "name": "Morocco", "flag": "🇲🇦", "group": "Group C" },
-    { "id": "HTI", "name": "Haiti", "flag": "🇭🇹", "group": "Group C" },
-    { "id": "SCO", "name": "Scotland", "flag": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "group": "Group C" },
-    { "id": "USA", "name": "United States", "flag": "🇺🇸", "group": "Group D" },
-    { "id": "PAR", "name": "Paraguay", "flag": "🇵🇾", "group": "Group D" },
-    { "id": "AUS", "name": "Australia", "flag": "🇦🇺", "group": "Group D" },
-    { "id": "TUR", "name": "Turkey", "flag": "🇹🇷", "group": "Group D" },
-    { "id": "GER", "name": "Germany", "flag": "🇩🇪", "group": "Group E" },
-    { "id": "CUW", "name": "Curaçao", "flag": "🇨🇼", "group": "Group E" },
-    { "id": "CIV", "name": "Ivory Coast", "flag": "🇨🇮", "group": "Group E" },
-    { "id": "ECU", "name": "Ecuador", "flag": "🇪🇨", "group": "Group E" },
-    { "id": "NED", "name": "Netherlands", "flag": "🇳🇱", "group": "Group F" },
-    { "id": "JPN", "name": "Japan", "flag": "🇯🇵", "group": "Group F" },
-    { "id": "SWE", "name": "Sweden", "flag": "🇸🇪", "group": "Group F" },
-    { "id": "TUN", "name": "Tunisia", "flag": "🇹🇳", "group": "Group F" },
-    { "id": "BEL", "name": "Belgium", "flag": "🇧🇪", "group": "Group G" },
-    { "id": "EGY", "name": "Egypt", "flag": "🇪🇬", "group": "Group G" },
-    { "id": "IRN", "name": "Iran", "flag": "🇮🇷", "group": "Group G" },
-    { "id": "NZL", "name": "New Zealand", "flag": "🇳🇿", "group": "Group G" },
-    { "id": "ESP", "name": "Spain", "flag": "🇪🇸", "group": "Group H" },
-    { "id": "CPV", "name": "Cabo Verde", "flag": "🇨🇻", "group": "Group H" },
-    { "id": "KSA", "name": "Saudi Arabia", "flag": "🇸🇦", "group": "Group H" },
-    { "id": "URU", "name": "Uruguay", "flag": "🇺🇾", "group": "Group H" },
-    { "id": "FRA", "name": "France", "flag": "🇫🇷", "group": "Group I" },
-    { "id": "SEN", "name": "Senegal", "flag": "🇸🇳", "group": "Group I" },
-    { "id": "IRQ", "name": "Iraq", "flag": "🇮🇶", "group": "Group I" },
-    { "id": "NOR", "name": "Norway", "flag": "🇳🇴", "group": "Group I" },
-    { "id": "ARG", "name": "Argentina", "flag": "🇦🇷", "group": "Group J" },
-    { "id": "ALG", "name": "Algeria", "flag": "🇩🇿", "group": "Group J" },
-    { "id": "AUT", "name": "Austria", "flag": "🇦🇹", "group": "Group J" },
-    { "id": "JOR", "name": "Jordan", "flag": "🇯🇴", "group": "Group J" },
-    { "id": "POR", "name": "Portugal", "flag": "🇵🇹", "group": "Group K" },
-    { "id": "COD", "name": "Congo DR", "flag": "🇨🇩", "group": "Group K" },
-    { "id": "UZB", "name": "Uzbekistan", "flag": "🇺🇿", "group": "Group K" },
-    { "id": "COL", "name": "Colombia", "flag": "🇨🇴", "group": "Group K" },
-    { "id": "ENG", "name": "England", "flag": "🏴", "group": "Group L" },
-    { "id": "CRO", "name": "Croatia", "flag": "🇭🇷", "group": "Group L" },
-    { "id": "GHA", "name": "Ghana", "flag": "🇬🇭", "group": "Group L" },
-    { "id": "PAN", "name": "Panama", "flag": "🇵🇦", "group": "Group L" }
+    {
+      "id": "MEX",
+      "name": "Mexico",
+      "flag": "🇲🇽",
+      "group": "Group A"
+    },
+    {
+      "id": "RSA",
+      "name": "South Africa",
+      "flag": "🇿🇦",
+      "group": "Group A"
+    },
+    {
+      "id": "KOR",
+      "name": "South Korea",
+      "flag": "🇰🇷",
+      "group": "Group A"
+    },
+    {
+      "id": "CZE",
+      "name": "Czechia",
+      "flag": "🇨🇿",
+      "group": "Group A"
+    },
+    {
+      "id": "CAN",
+      "name": "Canada",
+      "flag": "🇨🇦",
+      "group": "Group B"
+    },
+    {
+      "id": "BIH",
+      "name": "Bosnia and Herzegovina",
+      "flag": "🇧🇦",
+      "group": "Group B"
+    },
+    {
+      "id": "QAT",
+      "name": "Qatar",
+      "flag": "🇶🇦",
+      "group": "Group B"
+    },
+    {
+      "id": "SUI",
+      "name": "Switzerland",
+      "flag": "🇨🇭",
+      "group": "Group B"
+    },
+    {
+      "id": "BRA",
+      "name": "Brazil",
+      "flag": "🇧🇷",
+      "group": "Group C"
+    },
+    {
+      "id": "MAR",
+      "name": "Morocco",
+      "flag": "🇲🇦",
+      "group": "Group C"
+    },
+    {
+      "id": "HTI",
+      "name": "Haiti",
+      "flag": "🇭🇹",
+      "group": "Group C"
+    },
+    {
+      "id": "SCO",
+      "name": "Scotland",
+      "flag": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+      "group": "Group C"
+    },
+    {
+      "id": "USA",
+      "name": "United States",
+      "flag": "🇺🇸",
+      "group": "Group D"
+    },
+    {
+      "id": "PAR",
+      "name": "Paraguay",
+      "flag": "🇵🇾",
+      "group": "Group D"
+    },
+    {
+      "id": "AUS",
+      "name": "Australia",
+      "flag": "🇦🇺",
+      "group": "Group D"
+    },
+    {
+      "id": "TUR",
+      "name": "Turkey",
+      "flag": "🇹🇷",
+      "group": "Group D"
+    },
+    {
+      "id": "GER",
+      "name": "Germany",
+      "flag": "🇩🇪",
+      "group": "Group E"
+    },
+    {
+      "id": "CUW",
+      "name": "Curaçao",
+      "flag": "🇨🇼",
+      "group": "Group E"
+    },
+    {
+      "id": "CIV",
+      "name": "Ivory Coast",
+      "flag": "🇨🇮",
+      "group": "Group E"
+    },
+    {
+      "id": "ECU",
+      "name": "Ecuador",
+      "flag": "🇪🇨",
+      "group": "Group E"
+    },
+    {
+      "id": "NED",
+      "name": "Netherlands",
+      "flag": "🇳🇱",
+      "group": "Group F"
+    },
+    {
+      "id": "JPN",
+      "name": "Japan",
+      "flag": "🇯🇵",
+      "group": "Group F"
+    },
+    {
+      "id": "SWE",
+      "name": "Sweden",
+      "flag": "🇸🇪",
+      "group": "Group F"
+    },
+    {
+      "id": "TUN",
+      "name": "Tunisia",
+      "flag": "🇹🇳",
+      "group": "Group F"
+    },
+    {
+      "id": "BEL",
+      "name": "Belgium",
+      "flag": "🇧🇪",
+      "group": "Group G"
+    },
+    {
+      "id": "EGY",
+      "name": "Egypt",
+      "flag": "🇪🇬",
+      "group": "Group G"
+    },
+    {
+      "id": "IRN",
+      "name": "Iran",
+      "flag": "🇮🇷",
+      "group": "Group G"
+    },
+    {
+      "id": "NZL",
+      "name": "New Zealand",
+      "flag": "🇳🇿",
+      "group": "Group G"
+    },
+    {
+      "id": "ESP",
+      "name": "Spain",
+      "flag": "🇪🇸",
+      "group": "Group H"
+    },
+    {
+      "id": "CPV",
+      "name": "Cabo Verde",
+      "flag": "🇨🇻",
+      "group": "Group H"
+    },
+    {
+      "id": "KSA",
+      "name": "Saudi Arabia",
+      "flag": "🇸🇦",
+      "group": "Group H"
+    },
+    {
+      "id": "URU",
+      "name": "Uruguay",
+      "flag": "🇺🇾",
+      "group": "Group H"
+    },
+    {
+      "id": "FRA",
+      "name": "France",
+      "flag": "🇫🇷",
+      "group": "Group I"
+    },
+    {
+      "id": "SEN",
+      "name": "Senegal",
+      "flag": "🇸🇳",
+      "group": "Group I"
+    },
+    {
+      "id": "IRQ",
+      "name": "Iraq",
+      "flag": "🇮🇶",
+      "group": "Group I"
+    },
+    {
+      "id": "NOR",
+      "name": "Norway",
+      "flag": "🇳🇴",
+      "group": "Group I"
+    },
+    {
+      "id": "ARG",
+      "name": "Argentina",
+      "flag": "🇦🇷",
+      "group": "Group J"
+    },
+    {
+      "id": "ALG",
+      "name": "Algeria",
+      "flag": "🇩🇿",
+      "group": "Group J"
+    },
+    {
+      "id": "AUT",
+      "name": "Austria",
+      "flag": "🇦🇹",
+      "group": "Group J"
+    },
+    {
+      "id": "JOR",
+      "name": "Jordan",
+      "flag": "🇯🇴",
+      "group": "Group J"
+    },
+    {
+      "id": "POR",
+      "name": "Portugal",
+      "flag": "🇵🇹",
+      "group": "Group K"
+    },
+    {
+      "id": "COD",
+      "name": "Congo DR",
+      "flag": "🇨🇩",
+      "group": "Group K"
+    },
+    {
+      "id": "UZB",
+      "name": "Uzbekistan",
+      "flag": "🇺🇿",
+      "group": "Group K"
+    },
+    {
+      "id": "COL",
+      "name": "Colombia",
+      "flag": "🇨🇴",
+      "group": "Group K"
+    },
+    {
+      "id": "ENG",
+      "name": "England",
+      "flag": "🏴",
+      "group": "Group L"
+    },
+    {
+      "id": "CRO",
+      "name": "Croatia",
+      "flag": "🇭🇷",
+      "group": "Group L"
+    },
+    {
+      "id": "GHA",
+      "name": "Ghana",
+      "flag": "🇬🇭",
+      "group": "Group L"
+    },
+    {
+      "id": "PAN",
+      "name": "Panama",
+      "flag": "🇵🇦",
+      "group": "Group L"
+    }
   ],
   "players": [
-    { "id": 1, "name": "Lionel Messi", "countryId": "ARG", "position": "FWD", "price": 12.0, "rating": 90 },
-    { "id": 2, "name": "Lautaro Martinez", "countryId": "ARG", "position": "FWD", "price": 10.0, "rating": 86 },
-    { "id": 3, "name": "Alexis Mac Allister", "countryId": "ARG", "position": "MID", "price": 8.0, "rating": 84 },
-    { "id": 4, "name": "Emiliano Martinez", "countryId": "ARG", "position": "GK", "price": 5.5, "rating": 85 },
-
-    { "id": 5, "name": "Vinicius Jr", "countryId": "BRA", "position": "FWD", "price": 11.5, "rating": 89 },
-    { "id": 6, "name": "Bruno Guimaraes", "countryId": "BRA", "position": "MID", "price": 8.5, "rating": 85 },
-    { "id": 7, "name": "Marquinhos", "countryId": "BRA", "position": "DEF", "price": 6.5, "rating": 86 },
-    { "id": 8, "name": "Alisson Becker", "countryId": "BRA", "position": "GK", "price": 6.0, "rating": 87 },
-
-    { "id": 9, "name": "Kylian Mbappe", "countryId": "FRA", "position": "FWD", "price": 12.5, "rating": 91 },
-    { "id": 10, "name": "Antoine Griezmann", "countryId": "FRA", "position": "MID", "price": 9.5, "rating": 87 },
-    { "id": 11, "name": "William Saliba", "countryId": "FRA", "position": "DEF", "price": 6.5, "rating": 88 },
-
-    { "id": 12, "name": "Jude Bellingham", "countryId": "ENG", "position": "MID", "price": 11.0, "rating": 90 },
-    { "id": 13, "name": "Harry Kane", "countryId": "ENG", "position": "FWD", "price": 11.0, "rating": 89 },
-    { "id": 14, "name": "Bukayo Saka", "countryId": "ENG", "position": "MID", "price": 10.0, "rating": 88 },
-
-    { "id": 15, "name": "Lamine Yamal", "countryId": "ESP", "position": "FWD", "price": 9.5, "rating": 88 },
-    { "id": 16, "name": "Rodri", "countryId": "ESP", "position": "MID", "price": 9.0, "rating": 90 },
-    { "id": 17, "name": "Dani Carvajal", "countryId": "ESP", "position": "DEF", "price": 6.0, "rating": 85 },
-
-    { "id": 18, "name": "Florian Wirtz", "countryId": "GER", "position": "MID", "price": 10.0, "rating": 87 },
-    { "id": 19, "name": "Jamal Musiala", "countryId": "GER", "position": "MID", "price": 10.0, "rating": 87 },
-    { "id": 20, "name": "Antonio Ruediger", "countryId": "GER", "position": "DEF", "price": 6.5, "rating": 86 },
-
-    { "id": 21, "name": "Cristiano Ronaldo", "countryId": "POR", "position": "FWD", "price": 9.5, "rating": 86 },
-    { "id": 22, "name": "Bruno Fernandes", "countryId": "POR", "position": "MID", "price": 9.5, "rating": 88 },
-    { "id": 23, "name": "Ruben Dias", "countryId": "POR", "position": "DEF", "price": 6.5, "rating": 87 },
-
-    { "id": 24, "name": "Tomas Soucek", "countryId": "CZE", "position": "MID", "price": 8.5, "rating": 84 },
-    { "id": 25, "name": "Vladimir Coufal", "countryId": "CZE", "position": "DEF", "price": 6.0, "rating": 80 },
-    { "id": 26, "name": "Jindrich Stanek", "countryId": "CZE", "position": "GK", "price": 5.5, "rating": 81 },
-
-    { "id": 27, "name": "Federico Valverde", "countryId": "URU", "position": "MID", "price": 9.0, "rating": 88 },
-    { "id": 28, "name": "Darwin Nunez", "countryId": "URU", "position": "FWD", "price": 8.5, "rating": 83 },
-    { "id": 29, "name": "Ronald Araujo", "countryId": "URU", "position": "DEF", "price": 6.0, "rating": 84 },
-
-    { "id": 30, "name": "Luis Diaz", "countryId": "COL", "position": "MID", "price": 8.5, "rating": 85 },
-    { "id": 31, "name": "James Rodriguez", "countryId": "COL", "position": "MID", "price": 7.0, "rating": 82 },
-    { "id": 32, "name": "Davinson Sanchez", "countryId": "COL", "position": "DEF", "price": 5.0, "rating": 80 },
-
-    { "id": 33, "name": "Christian Pulisic", "countryId": "USA", "position": "MID", "price": 7.5, "rating": 84 },
-    { "id": 34, "name": "Weston McKennie", "countryId": "USA", "position": "MID", "price": 6.0, "rating": 81 },
-    { "id": 35, "name": "Antonee Robinson", "countryId": "USA", "position": "DEF", "price": 5.0, "rating": 81 },
-    { "id": 36, "name": "Matt Turner", "countryId": "USA", "position": "GK", "price": 4.5, "rating": 78 },
-
-    { "id": 37, "name": "Santiago Gimenez", "countryId": "MEX", "position": "FWD", "price": 8.0, "rating": 82 },
-    { "id": 38, "name": "Edson Alvarez", "countryId": "MEX", "position": "MID", "price": 6.5, "rating": 81 },
-    { "id": 39, "name": "Cesar Montes", "countryId": "MEX", "position": "DEF", "price": 5.0, "rating": 79 },
-
-    { "id": 40, "name": "Alphonso Davies", "countryId": "CAN", "position": "DEF", "price": 7.0, "rating": 85 },
-    { "id": 41, "name": "Jonathan David", "countryId": "CAN", "position": "FWD", "price": 8.0, "rating": 83 },
-    { "id": 42, "name": "Tajon Buchanan", "countryId": "CAN", "position": "MID", "price": 5.5, "rating": 79 },
-
-    { "id": 43, "name": "Kaoru Mitoma", "countryId": "JPN", "position": "MID", "price": 8.0, "rating": 84 },
-    { "id": 44, "name": "Takefusa Kubo", "countryId": "JPN", "position": "MID", "price": 7.5, "rating": 83 },
-    { "id": 45, "name": "Hiroki Ito", "countryId": "JPN", "position": "DEF", "price": 5.5, "rating": 81 },
-
-    { "id": 46, "name": "Heung-min Son", "countryId": "KOR", "position": "FWD", "price": 9.5, "rating": 86 },
-    { "id": 47, "name": "Kang-in Lee", "countryId": "KOR", "position": "MID", "price": 7.5, "rating": 82 },
-    { "id": 48, "name": "Min-jae Kim", "countryId": "KOR", "position": "DEF", "price": 6.5, "rating": 85 },
-
-    { "id": 49, "name": "Achraf Hakimi", "countryId": "MAR", "position": "DEF", "price": 7.0, "rating": 86 },
-    { "id": 50, "name": "Sofyan Amrabat", "countryId": "MAR", "position": "MID", "price": 6.0, "rating": 80 },
-    { "id": 51, "name": "Yassine Bounou", "countryId": "MAR", "position": "GK", "price": 5.0, "rating": 83 },
-
-    { "id": 52, "name": "Sadio Mane", "countryId": "SEN", "position": "FWD", "price": 8.0, "rating": 82 },
-    { "id": 53, "name": "Nicolas Jackson", "countryId": "SEN", "position": "FWD", "price": 7.5, "rating": 81 },
-    { "id": 54, "name": "Kalidou Koulibaly", "countryId": "SEN", "position": "DEF", "price": 5.5, "rating": 81 },
-
-    { "id": 55, "name": "Lyle Foster", "countryId": "RSA", "position": "FWD", "price": 8.5, "rating": 81 },
-    { "id": 56, "name": "Percy Tau", "countryId": "RSA", "position": "FWD", "price": 7.5, "rating": 79 },
-    { "id": 57, "name": "Teboho Mokoena", "countryId": "RSA", "position": "MID", "price": 6.5, "rating": 80 },
-
-    { "id": 58, "name": "Mohamed Salah", "countryId": "EGY", "position": "FWD", "price": 11.5, "rating": 89 },
-    { "id": 59, "name": "Omar Marmoush", "countryId": "EGY", "position": "FWD", "price": 8.0, "rating": 83 },
-    { "id": 60, "name": "Mostafa Mohamed", "countryId": "EGY", "position": "FWD", "price": 6.5, "rating": 79 },
-
-    { "id": 61, "name": "Luka Modric", "countryId": "CRO", "position": "MID", "price": 7.5, "rating": 83 },
-    { "id": 62, "name": "Mateo Kovacic", "countryId": "CRO", "position": "MID", "price": 7.0, "rating": 82 },
-    { "id": 63, "name": "Josko Gvardiol", "countryId": "CRO", "position": "DEF", "price": 6.5, "rating": 85 },
-
-    { "id": 64, "name": "Virgil van Dijk", "countryId": "NED", "position": "DEF", "price": 6.5, "rating": 87 },
-    { "id": 65, "name": "Frenkie de Jong", "countryId": "NED", "position": "MID", "price": 8.5, "rating": 85 },
-    { "id": 66, "name": "Cody Gakpo", "countryId": "NED", "position": "FWD", "price": 8.0, "rating": 83 },
-
-    { "id": 67, "name": "Kevin De Bruyne", "countryId": "BEL", "position": "MID", "price": 10.5, "rating": 88 },
-    { "id": 68, "name": "Romelu Lukaku", "countryId": "BEL", "position": "FWD", "price": 8.5, "rating": 82 },
-    { "id": 69, "name": "Jeremy Doku", "countryId": "BEL", "position": "MID", "price": 8.0, "rating": 83 },
-
-    { "id": 70, "name": "Granit Xhaka", "countryId": "SUI", "position": "MID", "price": 7.5, "rating": 84 },
-    { "id": 71, "name": "Manuel Akanji", "countryId": "SUI", "position": "DEF", "price": 6.0, "rating": 84 },
-    { "id": 72, "name": "Yann Sommer", "countryId": "SUI", "position": "GK", "price": 5.0, "rating": 82 },
-
-    { "id": 73, "name": "Miralem Pjanic", "countryId": "BIH", "position": "MID", "price": 6.5, "rating": 78 },
-    { "id": 74, "name": "Edin Dzeko", "countryId": "BIH", "position": "FWD", "price": 8.0, "rating": 82 },
-    { "id": 75, "name": "Sead Kolasinac", "countryId": "BIH", "position": "DEF", "price": 5.5, "rating": 79 },
-
-    { "id": 76, "name": "David Alaba", "countryId": "AUT", "position": "DEF", "price": 6.5, "rating": 84 },
-    { "id": 77, "name": "Marcel Sabitzer", "countryId": "AUT", "position": "MID", "price": 7.5, "rating": 83 },
-    { "id": 78, "name": "Konrad Laimer", "countryId": "AUT", "position": "MID", "price": 7.0, "rating": 81 },
-
-    { "id": 79, "name": "Aymen Hussein", "countryId": "IRQ", "position": "FWD", "price": 8.0, "rating": 81 },
-    { "id": 80, "name": "Ali Jasim", "countryId": "IRQ", "position": "MID", "price": 7.0, "rating": 78 },
-    { "id": 81, "name": "Jalal Hassan", "countryId": "IRQ", "position": "GK", "price": 4.5, "rating": 75 },
-
-    { "id": 82, "name": "Hakan Calhanoglu", "countryId": "TUR", "position": "MID", "price": 8.0, "rating": 85 },
-    { "id": 83, "name": "Arda Guler", "countryId": "TUR", "position": "MID", "price": 7.5, "rating": 81 },
-    { "id": 84, "name": "Kenan Yildiz", "countryId": "TUR", "position": "FWD", "price": 7.0, "rating": 80 },
-
-    { "id": 85, "name": "Mousa Al-Tamari", "countryId": "JOR", "position": "FWD", "price": 8.5, "rating": 83 },
-    { "id": 86, "name": "Yazan Al-Naimat", "countryId": "JOR", "position": "FWD", "price": 7.5, "rating": 79 },
-    { "id": 87, "name": "Yazid Abu Layla", "countryId": "JOR", "position": "GK", "price": 4.5, "rating": 75 },
-
-    { "id": 88, "name": "Moises Caicedo", "countryId": "ECU", "position": "MID", "price": 7.5, "rating": 83 },
-    { "id": 89, "name": "Piero Hincapie", "countryId": "ECU", "position": "DEF", "price": 5.5, "rating": 82 },
-    { "id": 90, "name": "Enner Valencia", "countryId": "ECU", "position": "FWD", "price": 6.0, "rating": 78 },
-
-    { "id": 91, "name": "Eldor Shomurodov", "countryId": "UZB", "position": "FWD", "price": 7.5, "rating": 80 },
-    { "id": 92, "name": "Rustam Ashurmatov", "countryId": "UZB", "position": "DEF", "price": 5.0, "rating": 75 },
-    { "id": 93, "name": "Abbosbek Fayzullaev", "countryId": "UZB", "position": "MID", "price": 7.0, "rating": 79 },
-
-    { "id": 94, "name": "Miguel Almiron", "countryId": "PAR", "position": "MID", "price": 6.5, "rating": 79 },
-    { "id": 95, "name": "Gustavo Gomez", "countryId": "PAR", "position": "DEF", "price": 5.0, "rating": 78 },
-    { "id": 96, "name": "Julio Enciso", "countryId": "PAR", "position": "FWD", "price": 6.0, "rating": 77 },
-
-    { "id": 97, "name": "Johny Placide", "countryId": "HTI", "position": "GK", "price": 4.5, "rating": 74 },
-    { "id": 98, "name": "Duckens Nazon", "countryId": "HTI", "position": "FWD", "price": 6.5, "rating": 76 },
-    { "id": 99, "name": "Carlens Arcus", "countryId": "HTI", "position": "DEF", "price": 5.0, "rating": 75 },
-
-    { "id": 100, "name": "Juninho Bacuna", "countryId": "CUW", "position": "MID", "price": 6.5, "rating": 76 },
-    { "id": 101, "name": "Rangelo Janga", "countryId": "CUW", "position": "FWD", "price": 6.0, "rating": 75 },
-    { "id": 102, "name": "Cuco Martina", "countryId": "CUW", "position": "DEF", "price": 4.5, "rating": 73 },
-
-    { "id": 103, "name": "Adalberto Carrasquilla", "countryId": "PAN", "position": "MID", "price": 5.5, "rating": 77 },
-    { "id": 104, "name": "Michael Murillo", "countryId": "PAN", "position": "DEF", "price": 5.0, "rating": 76 },
-    { "id": 105, "name": "Anibal Godoy", "countryId": "PAN", "position": "MID", "price": 4.5, "rating": 73 },
-
-    { "id": 106, "name": "Franck Kessie", "countryId": "CIV", "position": "MID", "price": 7.5, "rating": 82 },
-    { "id": 107, "name": "Sebastien Haller", "countryId": "CIV", "position": "FWD", "price": 7.5, "rating": 80 },
-    { "id": 108, "name": "Evan Ndicka", "countryId": "CIV", "position": "DEF", "price": 5.5, "rating": 81 },
-
-    { "id": 109, "name": "Riyad Mahrez", "countryId": "ALG", "position": "MID", "price": 8.0, "rating": 82 },
-    { "id": 110, "name": "Said Benrahma", "countryId": "ALG", "position": "MID", "price": 6.5, "rating": 79 },
-    { "id": 111, "name": "Aissa Mandi", "countryId": "ALG", "position": "DEF", "price": 4.5, "rating": 76 },
-
-    { "id": 112, "name": "Ellyes Skhiri", "countryId": "TUN", "position": "MID", "price": 6.0, "rating": 78 },
-    { "id": 113, "name": "Aissa Laidouni", "countryId": "TUN", "position": "MID", "price": 5.5, "rating": 76 },
-    { "id": 114, "name": "Montassar Talbi", "countryId": "TUN", "position": "DEF", "price": 4.5, "rating": 75 },
-
-    { "id": 115, "name": "Yoane Wissa", "countryId": "COD", "position": "FWD", "price": 7.5, "rating": 81 },
-    { "id": 116, "name": "Theo Bongonda", "countryId": "COD", "position": "MID", "price": 7.0, "rating": 79 },
-    { "id": 117, "name": "Chancel Mbemba", "countryId": "COD", "position": "DEF", "price": 6.5, "rating": 82 },
-
-    { "id": 118, "name": "Mohammed Kudus", "countryId": "GHA", "position": "MID", "price": 8.5, "rating": 84 },
-    { "id": 119, "name": "Inaki Williams", "countryId": "GHA", "position": "FWD", "price": 7.5, "rating": 80 },
-    { "id": 120, "name": "Thomas Partey", "countryId": "GHA", "position": "MID", "price": 7.0, "rating": 81 },
-
-    { "id": 121, "name": "Mehdi Taremi", "countryId": "IRN", "position": "FWD", "price": 7.5, "rating": 81 },
-    { "id": 122, "name": "Sardar Azmoun", "countryId": "IRN", "position": "FWD", "price": 7.0, "rating": 79 },
-    { "id": 123, "name": "Alireza Jahanbakhsh", "countryId": "IRN", "position": "MID", "price": 5.5, "rating": 76 },
-
-    { "id": 124, "name": "Salem Al-Dawsari", "countryId": "KSA", "position": "MID", "price": 6.0, "rating": 78 },
-    { "id": 125, "name": "Firas Al-Buraikan", "countryId": "KSA", "position": "FWD", "price": 5.5, "rating": 75 },
-    { "id": 126, "name": "Saud Abdulhamid", "countryId": "KSA", "position": "DEF", "price": 5.0, "rating": 77 },
-
-    { "id": 127, "name": "Harry Souttar", "countryId": "AUS", "position": "DEF", "price": 5.0, "rating": 77 },
-    { "id": 128, "name": "Mathew Ryan", "countryId": "AUS", "position": "GK", "price": 4.5, "rating": 77 },
-    { "id": 129, "name": "Jackson Irvine", "countryId": "AUS", "position": "MID", "price": 5.0, "rating": 75 },
-
-    { "id": 130, "name": "Akram Afif", "countryId": "QAT", "position": "FWD", "price": 6.5, "rating": 79 },
-    { "id": 131, "name": "Almoez Ali", "countryId": "QAT", "position": "FWD", "price": 6.0, "rating": 76 },
-    { "id": 132, "name": "Meshaal Barsham", "countryId": "QAT", "position": "GK", "price": 4.5, "rating": 74 },
-
-    { "id": 133, "name": "Chris Wood", "countryId": "NZL", "position": "FWD", "price": 6.5, "rating": 79 },
-    { "id": 134, "name": "Libato Cacace", "countryId": "NZL", "position": "DEF", "price": 4.5, "rating": 74 },
-    { "id": 135, "name": "Matthew Garbett", "countryId": "NZL", "position": "MID", "price": 4.5, "rating": 73 },
-
-    { "id": 136, "name": "Viktor Gyokeres", "countryId": "SWE", "position": "FWD", "price": 9.5, "rating": 87 },
-    { "id": 137, "name": "Alexander Isak", "countryId": "SWE", "position": "FWD", "price": 9.0, "rating": 86 },
-    { "id": 138, "name": "Dejan Kulusevski", "countryId": "SWE", "position": "MID", "price": 8.0, "rating": 83 },
-
-    { "id": 139, "name": "Erling Haaland", "countryId": "NOR", "position": "FWD", "price": 12.5, "rating": 91 },
-    { "id": 140, "name": "Martin Odegaard", "countryId": "NOR", "position": "MID", "price": 10.0, "rating": 88 },
-    { "id": 141, "name": "Leo Ostigard", "countryId": "NOR", "position": "DEF", "price": 5.0, "rating": 78 },
-
-    { "id": 142, "name": "Scott McTominay", "countryId": "SCO", "position": "MID", "price": 6.5, "rating": 80 },
-    { "id": 143, "name": "Andy Robertson", "countryId": "SCO", "position": "DEF", "price": 6.0, "rating": 83 },
-    { "id": 144, "name": "John McGinn", "countryId": "SCO", "position": "MID", "price": 6.5, "rating": 80 },
-
-    { "id": 145, "name": "Ryan Mendes", "countryId": "CPV", "position": "MID", "price": 6.5, "rating": 77 },
-    { "id": 146, "name": "Garry Rodrigues", "countryId": "CPV", "position": "MID", "price": 6.0, "rating": 76 },
-    { "id": 147, "name": "Logan Costa", "countryId": "CPV", "position": "DEF", "price": 5.5, "rating": 78 },
-    { "id": 148, "name": "Vozinha", "countryId": "CPV", "position": "GK", "price": 4.5, "rating": 72 }
+    {
+      "id": 1,
+      "name": "Lionel Messi",
+      "countryId": "ARG",
+      "position": "FWD",
+      "price": 12,
+      "rating": 90
+    },
+    {
+      "id": 2,
+      "name": "Lautaro Martinez",
+      "countryId": "ARG",
+      "position": "FWD",
+      "price": 10,
+      "rating": 86
+    },
+    {
+      "id": 3,
+      "name": "Alexis Mac Allister",
+      "countryId": "ARG",
+      "position": "MID",
+      "price": 8,
+      "rating": 84
+    },
+    {
+      "id": 4,
+      "name": "Emiliano Martinez",
+      "countryId": "ARG",
+      "position": "GK",
+      "price": 5.5,
+      "rating": 85
+    },
+    {
+      "id": 5,
+      "name": "Vinicius Jr",
+      "countryId": "BRA",
+      "position": "FWD",
+      "price": 11.5,
+      "rating": 89
+    },
+    {
+      "id": 6,
+      "name": "Bruno Guimaraes",
+      "countryId": "BRA",
+      "position": "MID",
+      "price": 8.5,
+      "rating": 85
+    },
+    {
+      "id": 7,
+      "name": "Marquinhos",
+      "countryId": "BRA",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 86
+    },
+    {
+      "id": 8,
+      "name": "Alisson Becker",
+      "countryId": "BRA",
+      "position": "GK",
+      "price": 6,
+      "rating": 87
+    },
+    {
+      "id": 9,
+      "name": "Kylian Mbappe",
+      "countryId": "FRA",
+      "position": "FWD",
+      "price": 12.5,
+      "rating": 91
+    },
+    {
+      "id": 10,
+      "name": "Antoine Griezmann",
+      "countryId": "FRA",
+      "position": "MID",
+      "price": 9.5,
+      "rating": 87
+    },
+    {
+      "id": 11,
+      "name": "William Saliba",
+      "countryId": "FRA",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 88
+    },
+    {
+      "id": 12,
+      "name": "Jude Bellingham",
+      "countryId": "ENG",
+      "position": "MID",
+      "price": 11,
+      "rating": 90
+    },
+    {
+      "id": 13,
+      "name": "Harry Kane",
+      "countryId": "ENG",
+      "position": "FWD",
+      "price": 11,
+      "rating": 89
+    },
+    {
+      "id": 14,
+      "name": "Bukayo Saka",
+      "countryId": "ENG",
+      "position": "MID",
+      "price": 10,
+      "rating": 88
+    },
+    {
+      "id": 15,
+      "name": "Lamine Yamal",
+      "countryId": "ESP",
+      "position": "FWD",
+      "price": 9.5,
+      "rating": 88
+    },
+    {
+      "id": 16,
+      "name": "Rodri",
+      "countryId": "ESP",
+      "position": "MID",
+      "price": 9,
+      "rating": 90
+    },
+    {
+      "id": 17,
+      "name": "Dani Carvajal",
+      "countryId": "ESP",
+      "position": "DEF",
+      "price": 6,
+      "rating": 85
+    },
+    {
+      "id": 18,
+      "name": "Florian Wirtz",
+      "countryId": "GER",
+      "position": "MID",
+      "price": 10,
+      "rating": 87
+    },
+    {
+      "id": 19,
+      "name": "Jamal Musiala",
+      "countryId": "GER",
+      "position": "MID",
+      "price": 10,
+      "rating": 87
+    },
+    {
+      "id": 20,
+      "name": "Antonio Ruediger",
+      "countryId": "GER",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 86
+    },
+    {
+      "id": 21,
+      "name": "Cristiano Ronaldo",
+      "countryId": "POR",
+      "position": "FWD",
+      "price": 9.5,
+      "rating": 86
+    },
+    {
+      "id": 22,
+      "name": "Bruno Fernandes",
+      "countryId": "POR",
+      "position": "MID",
+      "price": 9.5,
+      "rating": 88
+    },
+    {
+      "id": 23,
+      "name": "Ruben Dias",
+      "countryId": "POR",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 87
+    },
+    {
+      "id": 24,
+      "name": "Tomas Soucek",
+      "countryId": "CZE",
+      "position": "MID",
+      "price": 8.5,
+      "rating": 84
+    },
+    {
+      "id": 25,
+      "name": "Vladimir Coufal",
+      "countryId": "CZE",
+      "position": "DEF",
+      "price": 6,
+      "rating": 80
+    },
+    {
+      "id": 26,
+      "name": "Jindrich Stanek",
+      "countryId": "CZE",
+      "position": "GK",
+      "price": 5.5,
+      "rating": 81
+    },
+    {
+      "id": 27,
+      "name": "Federico Valverde",
+      "countryId": "URU",
+      "position": "MID",
+      "price": 9,
+      "rating": 88
+    },
+    {
+      "id": 28,
+      "name": "Darwin Nunez",
+      "countryId": "URU",
+      "position": "FWD",
+      "price": 8.5,
+      "rating": 83
+    },
+    {
+      "id": 29,
+      "name": "Ronald Araujo",
+      "countryId": "URU",
+      "position": "DEF",
+      "price": 6,
+      "rating": 84
+    },
+    {
+      "id": 30,
+      "name": "Luis Diaz",
+      "countryId": "COL",
+      "position": "MID",
+      "price": 8.5,
+      "rating": 85
+    },
+    {
+      "id": 31,
+      "name": "James Rodriguez",
+      "countryId": "COL",
+      "position": "MID",
+      "price": 7,
+      "rating": 82
+    },
+    {
+      "id": 32,
+      "name": "Davinson Sanchez",
+      "countryId": "COL",
+      "position": "DEF",
+      "price": 5,
+      "rating": 80
+    },
+    {
+      "id": 33,
+      "name": "Christian Pulisic",
+      "countryId": "USA",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 84
+    },
+    {
+      "id": 34,
+      "name": "Weston McKennie",
+      "countryId": "USA",
+      "position": "MID",
+      "price": 6,
+      "rating": 81
+    },
+    {
+      "id": 35,
+      "name": "Antonee Robinson",
+      "countryId": "USA",
+      "position": "DEF",
+      "price": 5,
+      "rating": 81
+    },
+    {
+      "id": 36,
+      "name": "Matt Turner",
+      "countryId": "USA",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 78
+    },
+    {
+      "id": 37,
+      "name": "Santiago Gimenez",
+      "countryId": "MEX",
+      "position": "FWD",
+      "price": 8,
+      "rating": 82
+    },
+    {
+      "id": 38,
+      "name": "Edson Alvarez",
+      "countryId": "MEX",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 81
+    },
+    {
+      "id": 39,
+      "name": "Cesar Montes",
+      "countryId": "MEX",
+      "position": "DEF",
+      "price": 5,
+      "rating": 79
+    },
+    {
+      "id": 40,
+      "name": "Alphonso Davies",
+      "countryId": "CAN",
+      "position": "DEF",
+      "price": 7,
+      "rating": 85
+    },
+    {
+      "id": 41,
+      "name": "Jonathan David",
+      "countryId": "CAN",
+      "position": "FWD",
+      "price": 8,
+      "rating": 83
+    },
+    {
+      "id": 42,
+      "name": "Tajon Buchanan",
+      "countryId": "CAN",
+      "position": "MID",
+      "price": 5.5,
+      "rating": 79
+    },
+    {
+      "id": 43,
+      "name": "Kaoru Mitoma",
+      "countryId": "JPN",
+      "position": "MID",
+      "price": 8,
+      "rating": 84
+    },
+    {
+      "id": 44,
+      "name": "Takefusa Kubo",
+      "countryId": "JPN",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 83
+    },
+    {
+      "id": 45,
+      "name": "Hiroki Ito",
+      "countryId": "JPN",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 81
+    },
+    {
+      "id": 46,
+      "name": "Heung-min Son",
+      "countryId": "KOR",
+      "position": "FWD",
+      "price": 9.5,
+      "rating": 86
+    },
+    {
+      "id": 47,
+      "name": "Kang-in Lee",
+      "countryId": "KOR",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 82
+    },
+    {
+      "id": 48,
+      "name": "Min-jae Kim",
+      "countryId": "KOR",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 85
+    },
+    {
+      "id": 49,
+      "name": "Achraf Hakimi",
+      "countryId": "MAR",
+      "position": "DEF",
+      "price": 7,
+      "rating": 86
+    },
+    {
+      "id": 50,
+      "name": "Sofyan Amrabat",
+      "countryId": "MAR",
+      "position": "MID",
+      "price": 6,
+      "rating": 80
+    },
+    {
+      "id": 51,
+      "name": "Yassine Bounou",
+      "countryId": "MAR",
+      "position": "GK",
+      "price": 5,
+      "rating": 83
+    },
+    {
+      "id": 52,
+      "name": "Sadio Mane",
+      "countryId": "SEN",
+      "position": "FWD",
+      "price": 8,
+      "rating": 82
+    },
+    {
+      "id": 53,
+      "name": "Nicolas Jackson",
+      "countryId": "SEN",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 81
+    },
+    {
+      "id": 54,
+      "name": "Kalidou Koulibaly",
+      "countryId": "SEN",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 81
+    },
+    {
+      "id": 55,
+      "name": "Lyle Foster",
+      "countryId": "RSA",
+      "position": "FWD",
+      "price": 8.5,
+      "rating": 81
+    },
+    {
+      "id": 56,
+      "name": "Percy Tau",
+      "countryId": "RSA",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 79
+    },
+    {
+      "id": 57,
+      "name": "Teboho Mokoena",
+      "countryId": "RSA",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 80
+    },
+    {
+      "id": 58,
+      "name": "Mohamed Salah",
+      "countryId": "EGY",
+      "position": "FWD",
+      "price": 11.5,
+      "rating": 89
+    },
+    {
+      "id": 59,
+      "name": "Omar Marmoush",
+      "countryId": "EGY",
+      "position": "FWD",
+      "price": 8,
+      "rating": 83
+    },
+    {
+      "id": 60,
+      "name": "Mostafa Mohamed",
+      "countryId": "EGY",
+      "position": "FWD",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 61,
+      "name": "Luka Modric",
+      "countryId": "CRO",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 83
+    },
+    {
+      "id": 62,
+      "name": "Mateo Kovacic",
+      "countryId": "CRO",
+      "position": "MID",
+      "price": 7,
+      "rating": 82
+    },
+    {
+      "id": 63,
+      "name": "Josko Gvardiol",
+      "countryId": "CRO",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 85
+    },
+    {
+      "id": 64,
+      "name": "Virgil van Dijk",
+      "countryId": "NED",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 87
+    },
+    {
+      "id": 65,
+      "name": "Frenkie de Jong",
+      "countryId": "NED",
+      "position": "MID",
+      "price": 8.5,
+      "rating": 85
+    },
+    {
+      "id": 66,
+      "name": "Cody Gakpo",
+      "countryId": "NED",
+      "position": "FWD",
+      "price": 8,
+      "rating": 83
+    },
+    {
+      "id": 67,
+      "name": "Kevin De Bruyne",
+      "countryId": "BEL",
+      "position": "MID",
+      "price": 10.5,
+      "rating": 88
+    },
+    {
+      "id": 68,
+      "name": "Romelu Lukaku",
+      "countryId": "BEL",
+      "position": "FWD",
+      "price": 8.5,
+      "rating": 82
+    },
+    {
+      "id": 69,
+      "name": "Jeremy Doku",
+      "countryId": "BEL",
+      "position": "MID",
+      "price": 8,
+      "rating": 83
+    },
+    {
+      "id": 70,
+      "name": "Granit Xhaka",
+      "countryId": "SUI",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 84
+    },
+    {
+      "id": 71,
+      "name": "Manuel Akanji",
+      "countryId": "SUI",
+      "position": "DEF",
+      "price": 6,
+      "rating": 84
+    },
+    {
+      "id": 72,
+      "name": "Yann Sommer",
+      "countryId": "SUI",
+      "position": "GK",
+      "price": 5,
+      "rating": 82
+    },
+    {
+      "id": 73,
+      "name": "Miralem Pjanic",
+      "countryId": "BIH",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 78
+    },
+    {
+      "id": 74,
+      "name": "Edin Dzeko",
+      "countryId": "BIH",
+      "position": "FWD",
+      "price": 8,
+      "rating": 82
+    },
+    {
+      "id": 75,
+      "name": "Sead Kolasinac",
+      "countryId": "BIH",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 79
+    },
+    {
+      "id": 76,
+      "name": "David Alaba",
+      "countryId": "AUT",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 84
+    },
+    {
+      "id": 77,
+      "name": "Marcel Sabitzer",
+      "countryId": "AUT",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 83
+    },
+    {
+      "id": 78,
+      "name": "Konrad Laimer",
+      "countryId": "AUT",
+      "position": "MID",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 79,
+      "name": "Aymen Hussein",
+      "countryId": "IRQ",
+      "position": "FWD",
+      "price": 8,
+      "rating": 81
+    },
+    {
+      "id": 80,
+      "name": "Ali Jasim",
+      "countryId": "IRQ",
+      "position": "MID",
+      "price": 7,
+      "rating": 78
+    },
+    {
+      "id": 81,
+      "name": "Jalal Hassan",
+      "countryId": "IRQ",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 75
+    },
+    {
+      "id": 82,
+      "name": "Hakan Calhanoglu",
+      "countryId": "TUR",
+      "position": "MID",
+      "price": 8,
+      "rating": 85
+    },
+    {
+      "id": 83,
+      "name": "Arda Guler",
+      "countryId": "TUR",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 81
+    },
+    {
+      "id": 84,
+      "name": "Kenan Yildiz",
+      "countryId": "TUR",
+      "position": "FWD",
+      "price": 7,
+      "rating": 80
+    },
+    {
+      "id": 85,
+      "name": "Mousa Al-Tamari",
+      "countryId": "JOR",
+      "position": "FWD",
+      "price": 8.5,
+      "rating": 83
+    },
+    {
+      "id": 86,
+      "name": "Yazan Al-Naimat",
+      "countryId": "JOR",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 79
+    },
+    {
+      "id": 87,
+      "name": "Yazid Abu Layla",
+      "countryId": "JOR",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 75
+    },
+    {
+      "id": 88,
+      "name": "Moises Caicedo",
+      "countryId": "ECU",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 83
+    },
+    {
+      "id": 89,
+      "name": "Piero Hincapie",
+      "countryId": "ECU",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 82
+    },
+    {
+      "id": 90,
+      "name": "Enner Valencia",
+      "countryId": "ECU",
+      "position": "FWD",
+      "price": 6,
+      "rating": 78
+    },
+    {
+      "id": 91,
+      "name": "Eldor Shomurodov",
+      "countryId": "UZB",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 80
+    },
+    {
+      "id": 92,
+      "name": "Rustam Ashurmatov",
+      "countryId": "UZB",
+      "position": "DEF",
+      "price": 5,
+      "rating": 75
+    },
+    {
+      "id": 93,
+      "name": "Abbosbek Fayzullaev",
+      "countryId": "UZB",
+      "position": "MID",
+      "price": 7,
+      "rating": 79
+    },
+    {
+      "id": 94,
+      "name": "Miguel Almiron",
+      "countryId": "PAR",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 95,
+      "name": "Gustavo Gomez",
+      "countryId": "PAR",
+      "position": "DEF",
+      "price": 5,
+      "rating": 78
+    },
+    {
+      "id": 96,
+      "name": "Julio Enciso",
+      "countryId": "PAR",
+      "position": "FWD",
+      "price": 6,
+      "rating": 77
+    },
+    {
+      "id": 97,
+      "name": "Johny Placide",
+      "countryId": "HTI",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 74
+    },
+    {
+      "id": 98,
+      "name": "Duckens Nazon",
+      "countryId": "HTI",
+      "position": "FWD",
+      "price": 6.5,
+      "rating": 76
+    },
+    {
+      "id": 99,
+      "name": "Carlens Arcus",
+      "countryId": "HTI",
+      "position": "DEF",
+      "price": 5,
+      "rating": 75
+    },
+    {
+      "id": 100,
+      "name": "Juninho Bacuna",
+      "countryId": "CUW",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 76
+    },
+    {
+      "id": 101,
+      "name": "Rangelo Janga",
+      "countryId": "CUW",
+      "position": "FWD",
+      "price": 6,
+      "rating": 75
+    },
+    {
+      "id": 102,
+      "name": "Cuco Martina",
+      "countryId": "CUW",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 73
+    },
+    {
+      "id": 103,
+      "name": "Adalberto Carrasquilla",
+      "countryId": "PAN",
+      "position": "MID",
+      "price": 5.5,
+      "rating": 77
+    },
+    {
+      "id": 104,
+      "name": "Michael Murillo",
+      "countryId": "PAN",
+      "position": "DEF",
+      "price": 5,
+      "rating": 76
+    },
+    {
+      "id": 105,
+      "name": "Anibal Godoy",
+      "countryId": "PAN",
+      "position": "MID",
+      "price": 4.5,
+      "rating": 73
+    },
+    {
+      "id": 106,
+      "name": "Franck Kessie",
+      "countryId": "CIV",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 82
+    },
+    {
+      "id": 107,
+      "name": "Sebastien Haller",
+      "countryId": "CIV",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 80
+    },
+    {
+      "id": 108,
+      "name": "Evan Ndicka",
+      "countryId": "CIV",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 81
+    },
+    {
+      "id": 109,
+      "name": "Riyad Mahrez",
+      "countryId": "ALG",
+      "position": "MID",
+      "price": 8,
+      "rating": 82
+    },
+    {
+      "id": 110,
+      "name": "Said Benrahma",
+      "countryId": "ALG",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 111,
+      "name": "Aissa Mandi",
+      "countryId": "ALG",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 76
+    },
+    {
+      "id": 112,
+      "name": "Ellyes Skhiri",
+      "countryId": "TUN",
+      "position": "MID",
+      "price": 6,
+      "rating": 78
+    },
+    {
+      "id": 113,
+      "name": "Aissa Laidouni",
+      "countryId": "TUN",
+      "position": "MID",
+      "price": 5.5,
+      "rating": 76
+    },
+    {
+      "id": 114,
+      "name": "Montassar Talbi",
+      "countryId": "TUN",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 75
+    },
+    {
+      "id": 115,
+      "name": "Yoane Wissa",
+      "countryId": "COD",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 81
+    },
+    {
+      "id": 116,
+      "name": "Theo Bongonda",
+      "countryId": "COD",
+      "position": "MID",
+      "price": 7,
+      "rating": 79
+    },
+    {
+      "id": 117,
+      "name": "Chancel Mbemba",
+      "countryId": "COD",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 82
+    },
+    {
+      "id": 118,
+      "name": "Mohammed Kudus",
+      "countryId": "GHA",
+      "position": "MID",
+      "price": 8.5,
+      "rating": 84
+    },
+    {
+      "id": 119,
+      "name": "Inaki Williams",
+      "countryId": "GHA",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 80
+    },
+    {
+      "id": 120,
+      "name": "Thomas Partey",
+      "countryId": "GHA",
+      "position": "MID",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 121,
+      "name": "Mehdi Taremi",
+      "countryId": "IRN",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 81
+    },
+    {
+      "id": 122,
+      "name": "Sardar Azmoun",
+      "countryId": "IRN",
+      "position": "FWD",
+      "price": 7,
+      "rating": 79
+    },
+    {
+      "id": 123,
+      "name": "Alireza Jahanbakhsh",
+      "countryId": "IRN",
+      "position": "MID",
+      "price": 5.5,
+      "rating": 76
+    },
+    {
+      "id": 124,
+      "name": "Salem Al-Dawsari",
+      "countryId": "KSA",
+      "position": "MID",
+      "price": 6,
+      "rating": 78
+    },
+    {
+      "id": 125,
+      "name": "Firas Al-Buraikan",
+      "countryId": "KSA",
+      "position": "FWD",
+      "price": 5.5,
+      "rating": 75
+    },
+    {
+      "id": 126,
+      "name": "Saud Abdulhamid",
+      "countryId": "KSA",
+      "position": "DEF",
+      "price": 5,
+      "rating": 77
+    },
+    {
+      "id": 127,
+      "name": "Harry Souttar",
+      "countryId": "AUS",
+      "position": "DEF",
+      "price": 5,
+      "rating": 77
+    },
+    {
+      "id": 128,
+      "name": "Mathew Ryan",
+      "countryId": "AUS",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 77
+    },
+    {
+      "id": 129,
+      "name": "Jackson Irvine",
+      "countryId": "AUS",
+      "position": "MID",
+      "price": 5,
+      "rating": 75
+    },
+    {
+      "id": 130,
+      "name": "Akram Afif",
+      "countryId": "QAT",
+      "position": "FWD",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 131,
+      "name": "Almoez Ali",
+      "countryId": "QAT",
+      "position": "FWD",
+      "price": 6,
+      "rating": 76
+    },
+    {
+      "id": 132,
+      "name": "Meshaal Barsham",
+      "countryId": "QAT",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 74
+    },
+    {
+      "id": 133,
+      "name": "Chris Wood",
+      "countryId": "NZL",
+      "position": "FWD",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 134,
+      "name": "Libato Cacace",
+      "countryId": "NZL",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 74
+    },
+    {
+      "id": 135,
+      "name": "Matthew Garbett",
+      "countryId": "NZL",
+      "position": "MID",
+      "price": 4.5,
+      "rating": 73
+    },
+    {
+      "id": 136,
+      "name": "Viktor Gyokeres",
+      "countryId": "SWE",
+      "position": "FWD",
+      "price": 9.5,
+      "rating": 87
+    },
+    {
+      "id": 137,
+      "name": "Alexander Isak",
+      "countryId": "SWE",
+      "position": "FWD",
+      "price": 9,
+      "rating": 86
+    },
+    {
+      "id": 138,
+      "name": "Dejan Kulusevski",
+      "countryId": "SWE",
+      "position": "MID",
+      "price": 8,
+      "rating": 83
+    },
+    {
+      "id": 139,
+      "name": "Erling Haaland",
+      "countryId": "NOR",
+      "position": "FWD",
+      "price": 12.5,
+      "rating": 91
+    },
+    {
+      "id": 140,
+      "name": "Martin Odegaard",
+      "countryId": "NOR",
+      "position": "MID",
+      "price": 10,
+      "rating": 88
+    },
+    {
+      "id": 141,
+      "name": "Leo Ostigard",
+      "countryId": "NOR",
+      "position": "DEF",
+      "price": 5,
+      "rating": 78
+    },
+    {
+      "id": 142,
+      "name": "Scott McTominay",
+      "countryId": "SCO",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 80
+    },
+    {
+      "id": 143,
+      "name": "Andy Robertson",
+      "countryId": "SCO",
+      "position": "DEF",
+      "price": 6,
+      "rating": 83
+    },
+    {
+      "id": 144,
+      "name": "John McGinn",
+      "countryId": "SCO",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 80
+    },
+    {
+      "id": 145,
+      "name": "Ryan Mendes",
+      "countryId": "CPV",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 77
+    },
+    {
+      "id": 146,
+      "name": "Garry Rodrigues",
+      "countryId": "CPV",
+      "position": "MID",
+      "price": 6,
+      "rating": 76
+    },
+    {
+      "id": 147,
+      "name": "Logan Costa",
+      "countryId": "CPV",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 78
+    },
+    {
+      "id": 148,
+      "name": "Vozinha",
+      "countryId": "CPV",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 72
+    },
+    {
+      "id": 149,
+      "name": "Lucas Diaz",
+      "countryId": "MEX",
+      "position": "GK",
+      "price": 6,
+      "rating": 77
+    },
+    {
+      "id": 150,
+      "name": "Juan Gomez",
+      "countryId": "MEX",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 71
+    },
+    {
+      "id": 151,
+      "name": "Carlos Diaz",
+      "countryId": "MEX",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 77
+    },
+    {
+      "id": 152,
+      "name": "Kwame Kone",
+      "countryId": "RSA",
+      "position": "GK",
+      "price": 8.5,
+      "rating": 88
+    },
+    {
+      "id": 153,
+      "name": "Didier Haddad",
+      "countryId": "RSA",
+      "position": "DEF",
+      "price": 8.5,
+      "rating": 87
+    },
+    {
+      "id": 154,
+      "name": "Kojo Kouadio",
+      "countryId": "RSA",
+      "position": "DEF",
+      "price": 7,
+      "rating": 82
+    },
+    {
+      "id": 155,
+      "name": "Sipho Dube",
+      "countryId": "RSA",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 80
+    },
+    {
+      "id": 156,
+      "name": "Koki Choi",
+      "countryId": "KOR",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 72
+    },
+    {
+      "id": 157,
+      "name": "Sardor Choi",
+      "countryId": "KOR",
+      "position": "DEF",
+      "price": 8.5,
+      "rating": 88
+    },
+    {
+      "id": 158,
+      "name": "Abdullah Al-Shorafi",
+      "countryId": "KOR",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 81
+    },
+    {
+      "id": 159,
+      "name": "Andreas Horvat",
+      "countryId": "CZE",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 75
+    },
+    {
+      "id": 160,
+      "name": "Thomas Novak",
+      "countryId": "CZE",
+      "position": "MID",
+      "price": 6,
+      "rating": 75
+    },
+    {
+      "id": 161,
+      "name": "Luka de Jong",
+      "countryId": "CZE",
+      "position": "FWD",
+      "price": 6.5,
+      "rating": 76
+    },
+    {
+      "id": 162,
+      "name": "Charles Johnson",
+      "countryId": "CAN",
+      "position": "GK",
+      "price": 4,
+      "rating": 70
+    },
+    {
+      "id": 163,
+      "name": "Richard Martin",
+      "countryId": "CAN",
+      "position": "DEF",
+      "price": 6,
+      "rating": 77
+    },
+    {
+      "id": 164,
+      "name": "James Wilson",
+      "countryId": "CAN",
+      "position": "MID",
+      "price": 7,
+      "rating": 79
+    },
+    {
+      "id": 165,
+      "name": "Michael Smith",
+      "countryId": "BIH",
+      "position": "GK",
+      "price": 7.5,
+      "rating": 84
+    },
+    {
+      "id": 166,
+      "name": "Daniel Wilson",
+      "countryId": "BIH",
+      "position": "DEF",
+      "price": 6,
+      "rating": 77
+    },
+    {
+      "id": 167,
+      "name": "Richard Jackson",
+      "countryId": "BIH",
+      "position": "MID",
+      "price": 9,
+      "rating": 87
+    },
+    {
+      "id": 168,
+      "name": "Moussa Gyan",
+      "countryId": "QAT",
+      "position": "DEF",
+      "price": 7,
+      "rating": 82
+    },
+    {
+      "id": 169,
+      "name": "Kojo Sow",
+      "countryId": "QAT",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 72
+    },
+    {
+      "id": 170,
+      "name": "Thabo N'Diaye",
+      "countryId": "QAT",
+      "position": "MID",
+      "price": 9,
+      "rating": 87
+    },
+    {
+      "id": 171,
+      "name": "Sipho Kouadio",
+      "countryId": "QAT",
+      "position": "MID",
+      "price": 7,
+      "rating": 79
+    },
+    {
+      "id": 172,
+      "name": "Ivan Gruber",
+      "countryId": "SUI",
+      "position": "DEF",
+      "price": 7.5,
+      "rating": 84
+    },
+    {
+      "id": 173,
+      "name": "Ivan Andersson",
+      "countryId": "SUI",
+      "position": "MID",
+      "price": 6,
+      "rating": 76
+    },
+    {
+      "id": 174,
+      "name": "Nils Fischer",
+      "countryId": "SUI",
+      "position": "FWD",
+      "price": 7,
+      "rating": 77
+    },
+    {
+      "id": 175,
+      "name": "Luis Gimenez",
+      "countryId": "BRA",
+      "position": "DEF",
+      "price": 7,
+      "rating": 82
+    },
+    {
+      "id": 176,
+      "name": "Enzo Fernandez",
+      "countryId": "BRA",
+      "position": "MID",
+      "price": 5.5,
+      "rating": 73
+    },
+    {
+      "id": 177,
+      "name": "Thabo Ndlovu",
+      "countryId": "MAR",
+      "position": "DEF",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 178,
+      "name": "Thabo Sow",
+      "countryId": "MAR",
+      "position": "MID",
+      "price": 9,
+      "rating": 87
+    },
+    {
+      "id": 179,
+      "name": "Amadi Kouadio",
+      "countryId": "MAR",
+      "position": "FWD",
+      "price": 5.5,
+      "rating": 71
+    },
+    {
+      "id": 180,
+      "name": "Charles Jackson",
+      "countryId": "HTI",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 181,
+      "name": "Robert Taylor",
+      "countryId": "HTI",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 78
+    },
+    {
+      "id": 182,
+      "name": "Matthew Brown",
+      "countryId": "HTI",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 78
+    },
+    {
+      "id": 183,
+      "name": "Andreas Weber",
+      "countryId": "SCO",
+      "position": "GK",
+      "price": 5.5,
+      "rating": 76
+    },
+    {
+      "id": 184,
+      "name": "Nils Eriksson",
+      "countryId": "SCO",
+      "position": "DEF",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 185,
+      "name": "Nils Kovac",
+      "countryId": "SCO",
+      "position": "FWD",
+      "price": 10,
+      "rating": 88
+    },
+    {
+      "id": 186,
+      "name": "Thomas Anderson",
+      "countryId": "USA",
+      "position": "DEF",
+      "price": 8,
+      "rating": 85
+    },
+    {
+      "id": 187,
+      "name": "Thomas Wilson",
+      "countryId": "USA",
+      "position": "FWD",
+      "price": 5,
+      "rating": 70
+    },
+    {
+      "id": 188,
+      "name": "Felipe Rodriguez",
+      "countryId": "PAR",
+      "position": "GK",
+      "price": 8,
+      "rating": 86
+    },
+    {
+      "id": 189,
+      "name": "Jose Pereira",
+      "countryId": "PAR",
+      "position": "DEF",
+      "price": 4,
+      "rating": 70
+    },
+    {
+      "id": 190,
+      "name": "Lucas Costa",
+      "countryId": "PAR",
+      "position": "MID",
+      "price": 4.5,
+      "rating": 70
+    },
+    {
+      "id": 191,
+      "name": "Robert Brown",
+      "countryId": "AUS",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 192,
+      "name": "Tyler Wilson",
+      "countryId": "AUS",
+      "position": "MID",
+      "price": 8.5,
+      "rating": 85
+    },
+    {
+      "id": 193,
+      "name": "Christopher Anderson",
+      "countryId": "AUS",
+      "position": "FWD",
+      "price": 6,
+      "rating": 74
+    },
+    {
+      "id": 194,
+      "name": "Charles Williams",
+      "countryId": "TUR",
+      "position": "GK",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 195,
+      "name": "Robert Smith",
+      "countryId": "TUR",
+      "position": "DEF",
+      "price": 8,
+      "rating": 86
+    },
+    {
+      "id": 196,
+      "name": "David Jones",
+      "countryId": "TUR",
+      "position": "DEF",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 197,
+      "name": "Luka Schmidt",
+      "countryId": "GER",
+      "position": "GK",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 198,
+      "name": "Jan Eriksson",
+      "countryId": "GER",
+      "position": "DEF",
+      "price": 5,
+      "rating": 73
+    },
+    {
+      "id": 199,
+      "name": "Nils Eriksson",
+      "countryId": "GER",
+      "position": "FWD",
+      "price": 10,
+      "rating": 88
+    },
+    {
+      "id": 200,
+      "name": "William Williams",
+      "countryId": "CUW",
+      "position": "GK",
+      "price": 7.5,
+      "rating": 83
+    },
+    {
+      "id": 201,
+      "name": "Ethan Davis",
+      "countryId": "CUW",
+      "position": "DEF",
+      "price": 6,
+      "rating": 78
+    },
+    {
+      "id": 202,
+      "name": "Thomas Davis",
+      "countryId": "CUW",
+      "position": "MID",
+      "price": 8.5,
+      "rating": 84
+    },
+    {
+      "id": 203,
+      "name": "Lamine Diop",
+      "countryId": "CIV",
+      "position": "GK",
+      "price": 6,
+      "rating": 77
+    },
+    {
+      "id": 204,
+      "name": "Ahmed Traore",
+      "countryId": "CIV",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 72
+    },
+    {
+      "id": 205,
+      "name": "Sadio Mensah",
+      "countryId": "CIV",
+      "position": "MID",
+      "price": 8.5,
+      "rating": 84
+    },
+    {
+      "id": 206,
+      "name": "Enzo Rodriguez",
+      "countryId": "ECU",
+      "position": "GK",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 207,
+      "name": "Miguel Pereira",
+      "countryId": "ECU",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 71
+    },
+    {
+      "id": 208,
+      "name": "Bruno Torres",
+      "countryId": "ECU",
+      "position": "MID",
+      "price": 6,
+      "rating": 76
+    },
+    {
+      "id": 209,
+      "name": "Andreas Kovac",
+      "countryId": "NED",
+      "position": "GK",
+      "price": 8,
+      "rating": 85
+    },
+    {
+      "id": 210,
+      "name": "Johan Eriksson",
+      "countryId": "NED",
+      "position": "DEF",
+      "price": 8.5,
+      "rating": 87
+    },
+    {
+      "id": 211,
+      "name": "Sven van Dijk",
+      "countryId": "NED",
+      "position": "MID",
+      "price": 5,
+      "rating": 72
+    },
+    {
+      "id": 212,
+      "name": "Ye-jun Takahashi",
+      "countryId": "JPN",
+      "position": "GK",
+      "price": 4,
+      "rating": 70
+    },
+    {
+      "id": 213,
+      "name": "Jasur Al-Harbi",
+      "countryId": "JPN",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 214,
+      "name": "Hiroto Park",
+      "countryId": "JPN",
+      "position": "FWD",
+      "price": 6.5,
+      "rating": 75
+    },
+    {
+      "id": 215,
+      "name": "Hans Fischer",
+      "countryId": "SWE",
+      "position": "GK",
+      "price": 7.5,
+      "rating": 83
+    },
+    {
+      "id": 216,
+      "name": "Jan van Dijk",
+      "countryId": "SWE",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 217,
+      "name": "Ivan Eriksson",
+      "countryId": "SWE",
+      "position": "DEF",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 218,
+      "name": "Karl Eriksson",
+      "countryId": "SWE",
+      "position": "MID",
+      "price": 5.5,
+      "rating": 74
+    },
+    {
+      "id": 219,
+      "name": "Sipho Diallo",
+      "countryId": "TUN",
+      "position": "GK",
+      "price": 7,
+      "rating": 82
+    },
+    {
+      "id": 220,
+      "name": "Sadio Kone",
+      "countryId": "TUN",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 76
+    },
+    {
+      "id": 221,
+      "name": "Didier Diop",
+      "countryId": "TUN",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 79
+    },
+    {
+      "id": 222,
+      "name": "Johan Fischer",
+      "countryId": "BEL",
+      "position": "GK",
+      "price": 6,
+      "rating": 77
+    },
+    {
+      "id": 223,
+      "name": "Luc Kovac",
+      "countryId": "BEL",
+      "position": "DEF",
+      "price": 8.5,
+      "rating": 87
+    },
+    {
+      "id": 224,
+      "name": "Marc Schmidt",
+      "countryId": "BEL",
+      "position": "DEF",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 225,
+      "name": "Cheikh Ndlovu",
+      "countryId": "EGY",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 71
+    },
+    {
+      "id": 226,
+      "name": "Mohamed Haddad",
+      "countryId": "EGY",
+      "position": "DEF",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 227,
+      "name": "Sadio Toure",
+      "countryId": "EGY",
+      "position": "DEF",
+      "price": 7.5,
+      "rating": 84
+    },
+    {
+      "id": 228,
+      "name": "Thabo Mensah",
+      "countryId": "EGY",
+      "position": "MID",
+      "price": 9,
+      "rating": 86
+    },
+    {
+      "id": 229,
+      "name": "Sadio Kouadio",
+      "countryId": "EGY",
+      "position": "MID",
+      "price": 6,
+      "rating": 76
+    },
+    {
+      "id": 230,
+      "name": "Sota Takahashi",
+      "countryId": "IRN",
+      "position": "GK",
+      "price": 5,
+      "rating": 73
+    },
+    {
+      "id": 231,
+      "name": "Haruto Park",
+      "countryId": "IRN",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 76
+    },
+    {
+      "id": 232,
+      "name": "Koki Al-Harbi",
+      "countryId": "IRN",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 72
+    },
+    {
+      "id": 233,
+      "name": "Ye-jun Park",
+      "countryId": "IRN",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 81
+    },
+    {
+      "id": 234,
+      "name": "David Anderson",
+      "countryId": "NZL",
+      "position": "GK",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 235,
+      "name": "Michael Thomas",
+      "countryId": "NZL",
+      "position": "DEF",
+      "price": 5,
+      "rating": 73
+    },
+    {
+      "id": 236,
+      "name": "Matthew Johnson",
+      "countryId": "NZL",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 80
+    },
+    {
+      "id": 237,
+      "name": "Rodrigo Rodriguez",
+      "countryId": "ESP",
+      "position": "GK",
+      "price": 7.5,
+      "rating": 84
+    },
+    {
+      "id": 238,
+      "name": "Juan Pereira",
+      "countryId": "ESP",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 80
+    },
+    {
+      "id": 239,
+      "name": "Mateo Gomez",
+      "countryId": "ESP",
+      "position": "MID",
+      "price": 9,
+      "rating": 87
+    },
+    {
+      "id": 240,
+      "name": "Enzo Torres",
+      "countryId": "CPV",
+      "position": "DEF",
+      "price": 8.5,
+      "rating": 87
+    },
+    {
+      "id": 241,
+      "name": "Jose Torres",
+      "countryId": "CPV",
+      "position": "FWD",
+      "price": 6,
+      "rating": 74
+    },
+    {
+      "id": 242,
+      "name": "Sardor Rezaei",
+      "countryId": "KSA",
+      "position": "GK",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 243,
+      "name": "Abdullah Watanabe",
+      "countryId": "KSA",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 244,
+      "name": "Ye-jun Al-Shorafi",
+      "countryId": "KSA",
+      "position": "MID",
+      "price": 5.5,
+      "rating": 73
+    },
+    {
+      "id": 245,
+      "name": "Juan Martin",
+      "countryId": "URU",
+      "position": "GK",
+      "price": 8,
+      "rating": 86
+    },
+    {
+      "id": 246,
+      "name": "Mateo Rodriguez",
+      "countryId": "URU",
+      "position": "DEF",
+      "price": 7.5,
+      "rating": 83
+    },
+    {
+      "id": 247,
+      "name": "Jose Fernandez",
+      "countryId": "URU",
+      "position": "MID",
+      "price": 7,
+      "rating": 79
+    },
+    {
+      "id": 248,
+      "name": "James Martin",
+      "countryId": "FRA",
+      "position": "GK",
+      "price": 4.5,
+      "rating": 71
+    },
+    {
+      "id": 249,
+      "name": "Michael Williams",
+      "countryId": "FRA",
+      "position": "DEF",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 250,
+      "name": "Tyler Brown",
+      "countryId": "FRA",
+      "position": "MID",
+      "price": 5.5,
+      "rating": 73
+    },
+    {
+      "id": 251,
+      "name": "Kojo Mensah",
+      "countryId": "SEN",
+      "position": "GK",
+      "price": 6,
+      "rating": 78
+    },
+    {
+      "id": 252,
+      "name": "Kojo Toure",
+      "countryId": "SEN",
+      "position": "DEF",
+      "price": 5,
+      "rating": 73
+    },
+    {
+      "id": 253,
+      "name": "Amadi Kone",
+      "countryId": "SEN",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 81
+    },
+    {
+      "id": 254,
+      "name": "Youssef Ndlovu",
+      "countryId": "SEN",
+      "position": "MID",
+      "price": 5,
+      "rating": 71
+    },
+    {
+      "id": 255,
+      "name": "Thabo Gyan",
+      "countryId": "IRQ",
+      "position": "DEF",
+      "price": 8.5,
+      "rating": 88
+    },
+    {
+      "id": 256,
+      "name": "Lamine Diallo",
+      "countryId": "IRQ",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 75
+    },
+    {
+      "id": 257,
+      "name": "Sipho Mensah",
+      "countryId": "IRQ",
+      "position": "MID",
+      "price": 4.5,
+      "rating": 70
+    },
+    {
+      "id": 258,
+      "name": "Luka Novak",
+      "countryId": "NOR",
+      "position": "GK",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 259,
+      "name": "Lars Kovac",
+      "countryId": "NOR",
+      "position": "DEF",
+      "price": 5.5,
+      "rating": 76
+    },
+    {
+      "id": 260,
+      "name": "Nils Novak",
+      "countryId": "NOR",
+      "position": "MID",
+      "price": 6.5,
+      "rating": 77
+    },
+    {
+      "id": 261,
+      "name": "Juan Gomez",
+      "countryId": "ARG",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 262,
+      "name": "Lautaro Fernandez",
+      "countryId": "ARG",
+      "position": "DEF",
+      "price": 6,
+      "rating": 78
+    },
+    {
+      "id": 263,
+      "name": "Jose Pereira",
+      "countryId": "ARG",
+      "position": "MID",
+      "price": 5,
+      "rating": 72
+    },
+    {
+      "id": 264,
+      "name": "Amadi Kouadio",
+      "countryId": "ALG",
+      "position": "GK",
+      "price": 8.5,
+      "rating": 88
+    },
+    {
+      "id": 265,
+      "name": "Didier Ndlovu",
+      "countryId": "ALG",
+      "position": "DEF",
+      "price": 6,
+      "rating": 78
+    },
+    {
+      "id": 266,
+      "name": "Kwame Gyan",
+      "countryId": "ALG",
+      "position": "FWD",
+      "price": 5.5,
+      "rating": 71
+    },
+    {
+      "id": 267,
+      "name": "Johan Novak",
+      "countryId": "AUT",
+      "position": "GK",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 268,
+      "name": "Marc Müller",
+      "countryId": "AUT",
+      "position": "DEF",
+      "price": 7,
+      "rating": 81
+    },
+    {
+      "id": 269,
+      "name": "Karl Eriksson",
+      "countryId": "AUT",
+      "position": "FWD",
+      "price": 9,
+      "rating": 85
+    },
+    {
+      "id": 270,
+      "name": "Amadi Sow",
+      "countryId": "JOR",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 271,
+      "name": "Youssef Mensah",
+      "countryId": "JOR",
+      "position": "DEF",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 272,
+      "name": "Kojo Sow",
+      "countryId": "JOR",
+      "position": "MID",
+      "price": 7,
+      "rating": 79
+    },
+    {
+      "id": 273,
+      "name": "Moussa Ndlovu",
+      "countryId": "JOR",
+      "position": "MID",
+      "price": 8,
+      "rating": 83
+    },
+    {
+      "id": 274,
+      "name": "Christopher Anderson",
+      "countryId": "POR",
+      "position": "GK",
+      "price": 5,
+      "rating": 73
+    },
+    {
+      "id": 275,
+      "name": "Robert Brown",
+      "countryId": "POR",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 71
+    },
+    {
+      "id": 276,
+      "name": "Charles Moore",
+      "countryId": "POR",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 81
+    },
+    {
+      "id": 277,
+      "name": "Youssef Gyan",
+      "countryId": "COD",
+      "position": "GK",
+      "price": 8.5,
+      "rating": 87
+    },
+    {
+      "id": 278,
+      "name": "Kojo Dube",
+      "countryId": "COD",
+      "position": "DEF",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 279,
+      "name": "Amadi Ndlovu",
+      "countryId": "COD",
+      "position": "MID",
+      "price": 7.5,
+      "rating": 80
+    },
+    {
+      "id": 280,
+      "name": "Abdullah Lee",
+      "countryId": "UZB",
+      "position": "GK",
+      "price": 8,
+      "rating": 86
+    },
+    {
+      "id": 281,
+      "name": "Yuto Lee",
+      "countryId": "UZB",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 282,
+      "name": "Jasur Sato",
+      "countryId": "UZB",
+      "position": "MID",
+      "price": 9,
+      "rating": 87
+    },
+    {
+      "id": 283,
+      "name": "Jose Gomez",
+      "countryId": "COL",
+      "position": "GK",
+      "price": 4,
+      "rating": 70
+    },
+    {
+      "id": 284,
+      "name": "Lucas Lopez",
+      "countryId": "COL",
+      "position": "DEF",
+      "price": 8.5,
+      "rating": 87
+    },
+    {
+      "id": 285,
+      "name": "Carlos Gimenez",
+      "countryId": "COL",
+      "position": "FWD",
+      "price": 5.5,
+      "rating": 72
+    },
+    {
+      "id": 286,
+      "name": "Thomas Davis",
+      "countryId": "ENG",
+      "position": "GK",
+      "price": 7.5,
+      "rating": 84
+    },
+    {
+      "id": 287,
+      "name": "Michael Jackson",
+      "countryId": "ENG",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 71
+    },
+    {
+      "id": 288,
+      "name": "David Jones",
+      "countryId": "ENG",
+      "position": "DEF",
+      "price": 5,
+      "rating": 74
+    },
+    {
+      "id": 289,
+      "name": "Jan Svoboda",
+      "countryId": "CRO",
+      "position": "GK",
+      "price": 4,
+      "rating": 70
+    },
+    {
+      "id": 290,
+      "name": "Stefan Horvat",
+      "countryId": "CRO",
+      "position": "DEF",
+      "price": 6.5,
+      "rating": 79
+    },
+    {
+      "id": 291,
+      "name": "Jan Fischer",
+      "countryId": "CRO",
+      "position": "FWD",
+      "price": 9.5,
+      "rating": 86
+    },
+    {
+      "id": 292,
+      "name": "Thomas Brown",
+      "countryId": "GHA",
+      "position": "GK",
+      "price": 8,
+      "rating": 86
+    },
+    {
+      "id": 293,
+      "name": "Richard Anderson",
+      "countryId": "GHA",
+      "position": "DEF",
+      "price": 4.5,
+      "rating": 71
+    },
+    {
+      "id": 294,
+      "name": "Daniel Thomas",
+      "countryId": "GHA",
+      "position": "DEF",
+      "price": 4,
+      "rating": 70
+    },
+    {
+      "id": 295,
+      "name": "Bruno Gimenez",
+      "countryId": "PAN",
+      "position": "GK",
+      "price": 5,
+      "rating": 73
+    },
+    {
+      "id": 296,
+      "name": "Jose Santos",
+      "countryId": "PAN",
+      "position": "DEF",
+      "price": 4,
+      "rating": 70
+    },
+    {
+      "id": 297,
+      "name": "Lucas Silva",
+      "countryId": "PAN",
+      "position": "FWD",
+      "price": 7.5,
+      "rating": 79
+    }
   ]
 }

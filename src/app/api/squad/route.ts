@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recoverMessageAddress } from "viem";
-import { Player, isValidFormation } from "../../../utils/fplScoring";
+import { Player, isValidFormation, getFormationPositions } from "../../../utils/fplScoring";
 import { readState, writeState, getSeedData } from "../../../utils/gameStateHandler";
 
 export async function GET(request: NextRequest) {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const players: Player[] = seed.players;
     const playerMap = new Map(players.map(p => [p.id, p]));
 
-    const { starters, subs, captainId, viceCaptainId } = squad;
+    const { starters, subs, captainId, viceCaptainId, formation } = squad;
 
     if (!Array.isArray(starters) || starters.length !== 11) {
       return NextResponse.json({ error: "Starting XI must contain exactly 11 players" }, { status: 400 });
@@ -111,6 +111,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Starting formation is invalid (Must have exactly 1 GK, at least 3 DEF, at least 1 FWD)" }, { status: 400 });
     }
 
+    const requiredPositions = getFormationPositions(formation || '4-4-2');
+    for (let i = 0; i < starterPlayers.length; i++) {
+      if (starterPlayers[i].position !== requiredPositions[i]) {
+        return NextResponse.json({
+          error: `Player at slot ${i + 1} does not match required position ${requiredPositions[i]} for formation ${formation || '4-4-2'} (found ${starterPlayers[i].position})`
+        }, { status: 400 });
+      }
+    }
+
     // Validate captain/vice-captain
     if (!starters.includes(captainId)) {
       return NextResponse.json({ error: "Captain must be one of the starters" }, { status: 400 });
@@ -148,7 +157,8 @@ export async function POST(request: NextRequest) {
       starters,
       subs,
       captainId,
-      viceCaptainId
+      viceCaptainId,
+      formation: formation || '4-4-2'
     };
 
     writeState(state);

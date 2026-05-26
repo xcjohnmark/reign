@@ -10,6 +10,9 @@ export async function GET(request: NextRequest) {
       const totalScore = u.history.reduce((sum, h) => sum + h.score, 0);
       const totalReward = u.history.reduce((sum, h) => sum + h.reward, 0);
       const totalNetProfit = u.history.reduce((sum, h) => sum + h.netProfit, 0);
+      
+      const latestHistory = u.history[u.history.length - 1];
+      const latestPnL = latestHistory ? latestHistory.netProfit : 0.0;
 
       return {
         wallet: u.wallet,
@@ -17,6 +20,7 @@ export async function GET(request: NextRequest) {
         totalScore,
         totalReward,
         totalNetProfit,
+        latestPnL,
         hasSquad: u.squad !== null,
         lockedCapital: u.onChainState?.lockedPrincipal || 0.0
       };

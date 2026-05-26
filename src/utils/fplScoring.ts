@@ -21,10 +21,11 @@ export interface MatchStats {
 }
 
 export interface Squad {
-  starters: number[]; // Array of 11 player IDs
-  subs: number[];     // Array of 4 player IDs (ordered left-to-right)
-  captainId: number;
-  viceCaptainId: number;
+  starters: (number | null)[]; // Array of 11 player IDs (or null for empty slots)
+  subs: (number | null)[];     // Array of 4 player IDs (or null for empty slots)
+  captainId: number | null;
+  viceCaptainId: number | null;
+  formation?: string;
 }
 
 /**
@@ -126,11 +127,11 @@ export function performAutoSubstitutions(
 
   // 1. Identify starting GK and bench GK
   const startingGkIndex = finalStarters.findIndex(p => p.position === 'GK');
-  const startingGk = finalStarters[startingGkIndex];
-  const startingGkStats = statsMap[startingGk.id] || { minutesPlayed: 0 };
+  const startingGk = startingGkIndex !== -1 ? finalStarters[startingGkIndex] : null;
+  const startingGkStats = (startingGk && statsMap[startingGk.id]) || { minutesPlayed: 0 };
 
-  // If starting GK played 0 minutes, look for the bench GK
-  if (startingGkStats.minutesPlayed === 0) {
+  // If starting GK played 0 minutes (or is missing), look for the bench GK
+  if (!startingGk || startingGkStats.minutesPlayed === 0) {
     const benchGkIndex = finalSubs.findIndex(p => p.position === 'GK');
     if (benchGkIndex !== -1) {
       const benchGk = finalSubs[benchGkIndex];
@@ -138,9 +139,16 @@ export function performAutoSubstitutions(
 
       if (benchGkStats.minutesPlayed > 0) {
         // Swap goalkeeper
-        finalStarters[startingGkIndex] = benchGk;
-        finalSubs[benchGkIndex] = startingGk;
-        substitutionsMade.push({ out: startingGk, in: benchGk });
+        if (startingGkIndex !== -1) {
+          finalStarters[startingGkIndex] = benchGk;
+          finalSubs[benchGkIndex] = startingGk!;
+          if (startingGk) {
+            substitutionsMade.push({ out: startingGk, in: benchGk });
+          }
+        } else {
+          finalStarters.push(benchGk);
+          finalSubs.splice(benchGkIndex, 1);
+        }
       }
     }
   }
@@ -204,20 +212,20 @@ export function calculateTeamScore(
 ): TeamScoreResult {
   const playerMap = new Map(allPlayers.map(p => [p.id, p]));
 
-  const starterPlayers = squad.starters.map(id => playerMap.get(id)!).filter(Boolean);
-  const subPlayers = squad.subs.map(id => playerMap.get(id)!).filter(Boolean);
+  const starterPlayers = squad.starters.map(id => id ? playerMap.get(id) : null).filter((p): p is Player => !!p);
+  const subPlayers = squad.subs.map(id => id ? playerMap.get(id) : null).filter((p): p is Player => !!p);
 
   // Run auto-substitutions
   const { finalStarters, substitutionsMade } = performAutoSubstitutions(starterPlayers, subPlayers, statsMap);
 
   // Resolve captain and vice-captain
-  let activeCaptainId = squad.captainId;
-  const captainStats = statsMap[squad.captainId] || { minutesPlayed: 0 };
+  let activeCaptainId = squad.captainId || 0;
+  const captainStats = (squad.captainId && statsMap[squad.captainId]) || { minutesPlayed: 0 };
 
   if (captainStats.minutesPlayed === 0) {
-    const viceCaptainStats = statsMap[squad.viceCaptainId] || { minutesPlayed: 0 };
+    const viceCaptainStats = (squad.viceCaptainId && statsMap[squad.viceCaptainId]) || { minutesPlayed: 0 };
     if (viceCaptainStats.minutesPlayed > 0) {
-      activeCaptainId = squad.viceCaptainId;
+      activeCaptainId = squad.viceCaptainId || 0;
     }
   }
 
@@ -275,4 +283,25 @@ export function calculateTeamScore(
     substitutionsMade: substitutionsMade.map(s => ({ out: s.out.id, in: s.in.id })),
     activeCaptainId
   };
+}
+
+export function getFormationPositions(formation?: string): ('GK' | 'DEF' | 'MID' | 'FWD')[] {
+  const form = formation || '4-4-2';
+  switch (form) {
+    case '4-3-3':
+      return ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'FWD', 'FWD', 'FWD'];
+    case '3-5-2':
+      return ['GK', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'MID', 'FWD', 'FWD'];
+    case '4-2-3-1':
+      return ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'MID', 'FWD'];
+    case '3-4-3':
+      return ['GK', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'FWD', 'FWD', 'FWD'];
+    case '5-3-2':
+      return ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'FWD', 'FWD'];
+    case '5-4-1':
+      return ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'FWD'];
+    case '4-4-2':
+    default:
+      return ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'FWD', 'FWD'];
+  }
 }

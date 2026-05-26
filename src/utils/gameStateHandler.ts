@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Player, MatchStats, Squad, calculateTeamScore } from './fplScoring';
+import { Player, MatchStats, Squad, calculateTeamScore, getFormationPositions } from './fplScoring';
 import { calculateNRPS, NRPSEngineResult } from './nrpsEngine';
 import { generateValidSquad } from './squadGenerator';
 
@@ -175,6 +175,32 @@ function calculateBPS(player: Player, stats: MatchStats): number {
   return bps;
 }
 
+function getCheapestActivePlayer(
+  players: Player[],
+  activeCountries: string[],
+  position: 'GK' | 'DEF' | 'MID' | 'FWD',
+  excludedIds: Set<number>
+): Player {
+  const activePlayers = players.filter(p => 
+    p.position === position && 
+    activeCountries.includes(p.countryId) && 
+    !excludedIds.has(p.id)
+  );
+  if (activePlayers.length === 0) {
+    const activePlayersNoExclusion = players.filter(p => 
+      p.position === position && 
+      activeCountries.includes(p.countryId)
+    );
+    if (activePlayersNoExclusion.length === 0) {
+      throw new Error(`No active players found for position ${position}`);
+    }
+    activePlayersNoExclusion.sort((a, b) => a.price - b.price);
+    return activePlayersNoExclusion[0];
+  }
+  activePlayers.sort((a, b) => a.price - b.price);
+  return activePlayers[0];
+}
+
 // Simulate Matchday
 export function simulateMatchday(state: GameState): GameState {
   const md = state.currentMatchday;
@@ -186,6 +212,59 @@ export function simulateMatchday(state: GameState): GameState {
   const players: Player[] = seed.players;
   const countries = seed.countries;
   const activeCountries = [...state.activeCountries];
+
+  // Auto-fill competitor squads before simulation
+  for (const u of state.users) {
+    if (u.name !== 'User' && u.squad) {
+      const squad = u.squad;
+      const formation = squad.formation || '4-4-2';
+      const starterPositions = getFormationPositions(formation);
+      const subPositions = ['GK', 'DEF', 'MID', 'FWD'];
+
+      const currentSelectedIds = new Set<number>();
+      for (const id of [...squad.starters, ...squad.subs]) {
+        if (id) currentSelectedIds.add(id);
+      }
+
+      // Fill starters
+      for (let i = 0; i < squad.starters.length; i++) {
+        const id = squad.starters[i];
+        const player = id ? players.find(p => p.id === id) : null;
+        const isEliminated = player ? !activeCountries.includes(player.countryId) : true;
+
+        if (!id || isEliminated) {
+          if (id) currentSelectedIds.delete(id);
+          const pos = starterPositions[i];
+          const filler = getCheapestActivePlayer(players, activeCountries, pos, currentSelectedIds);
+          squad.starters[i] = filler.id;
+          currentSelectedIds.add(filler.id);
+        }
+      }
+
+      // Fill subs
+      for (let i = 0; i < squad.subs.length; i++) {
+        const id = squad.subs[i];
+        const player = id ? players.find(p => p.id === id) : null;
+        const isEliminated = player ? !activeCountries.includes(player.countryId) : true;
+
+        if (!id || isEliminated) {
+          if (id) currentSelectedIds.delete(id);
+          const pos = subPositions[i] as 'GK' | 'DEF' | 'MID' | 'FWD';
+          const filler = getCheapestActivePlayer(players, activeCountries, pos, currentSelectedIds);
+          squad.subs[i] = filler.id;
+          currentSelectedIds.add(filler.id);
+        }
+      }
+
+      // Ensure captain/vice-captain are valid
+      if (!squad.captainId || !squad.starters.includes(squad.captainId)) {
+        squad.captainId = squad.starters[0];
+      }
+      if (!squad.viceCaptainId || !squad.starters.includes(squad.viceCaptainId) || squad.viceCaptainId === squad.captainId) {
+        squad.viceCaptainId = squad.starters.find(id => id !== squad.captainId) || squad.starters[0];
+      }
+    }
+  }
 
   // Initialize stats map for all players (default is 0 mins)
   const statsMap: Record<number, MatchStats> = {};
@@ -404,6 +483,51 @@ export function simulateMatchday(state: GameState): GameState {
   state.activeCountries = activeCountryIds;
   if (state.currentMatchday > 7) {
     state.epochEnded = true;
+  }
+
+  // Auto-remove players from eliminated countries starting post-MD3 (i.e. after MD3 simulation completes)
+  if (md >= 3) {
+    for (const u of state.users) {
+      if (u.squad) {
+        const squad = u.squad;
+
+        // Clear eliminated starters
+        for (let i = 0; i < squad.starters.length; i++) {
+          const id = squad.starters[i];
+          if (id) {
+            const player = players.find(p => p.id === id);
+            if (!player || !activeCountryIds.includes(player.countryId)) {
+              squad.starters[i] = null;
+            }
+          }
+        }
+
+        // Clear eliminated subs
+        for (let i = 0; i < squad.subs.length; i++) {
+          const id = squad.subs[i];
+          if (id) {
+            const player = players.find(p => p.id === id);
+            if (!player || !activeCountryIds.includes(player.countryId)) {
+              squad.subs[i] = null;
+            }
+          }
+        }
+
+        // Clear captain / vice-captain if they are no longer in starters
+        if (squad.captainId) {
+          const isCaptainStillInStarters = squad.starters.includes(squad.captainId);
+          if (!isCaptainStillInStarters) {
+            squad.captainId = null;
+          }
+        }
+        if (squad.viceCaptainId) {
+          const isViceStillInStarters = squad.starters.includes(squad.viceCaptainId);
+          if (!isViceStillInStarters) {
+            squad.viceCaptainId = null;
+          }
+        }
+      }
+    }
   }
 
   writeState(state);

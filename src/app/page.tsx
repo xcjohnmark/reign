@@ -7,7 +7,7 @@ import {
   CheckCircle, TrendingUp, Info, LogOut 
 } from 'lucide-react';
 import seedData from '../data/seedData.json';
-import { isValidFormation, Player } from '../utils/fplScoring';
+import { isValidFormation, Player, getFormationPositions } from '../utils/fplScoring';
 
 // ABIs for real contract interactions
 const mockUsdtAbi = [
@@ -136,7 +136,7 @@ export default function Dashboard() {
   // Tournament / Simulator State
   const [currentMatchday, setCurrentMatchday] = useState<number>(1);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [leaderboardSortField, setLeaderboardSortField] = useState<'score' | 'locked' | 'pnl'>('score');
+  const [leaderboardSortField, setLeaderboardSortField] = useState<'score' | 'locked' | 'pnl' | 'totalPnl'>('score');
   const [leaderboardSortAsc, setLeaderboardSortAsc] = useState<boolean>(false);
   const [standings, setStandings] = useState<any[]>([]);
   const [activeCountries, setActiveCountries] = useState<string[]>([]);
@@ -149,6 +149,13 @@ export default function Dashboard() {
   const [subs, setSubs] = useState<(number | null)[]>(Array(4).fill(null)); // 4 slots
   const [captainId, setCaptainId] = useState<number | null>(null);
   const [viceCaptainId, setViceCaptainId] = useState<number | null>(null);
+  const [selectedFormation, setSelectedFormation] = useState<string>('4-4-2');
+  const [showValidationModal, setShowValidationModal] = useState<boolean>(false);
+  const [squadValidationErrors, setSquadValidationErrors] = useState<string[]>([]);
+  const [eliminationNotification, setEliminationNotification] = useState<{
+    removedCount: number;
+    remainingBudget: number;
+  } | null>(null);
 
   // Market Filters
   const [marketPosition, setMarketPosition] = useState<string>('ALL');
@@ -350,17 +357,42 @@ export default function Dashboard() {
       const res = await fetch(`/api/squad?wallet=${wallet}`);
       const data = await res.json();
       if (data.squad) {
-        const { starters: s, subs: b, captainId: cap, viceCaptainId: vice } = data.squad;
-        // Pad starters and subs to match lengths
-        setStarters(s.map((id: number) => id || null));
-        setSubs(b.map((id: number) => id || null));
+        const { starters: s, subs: b, captainId: cap, viceCaptainId: vice, formation: form } = data.squad;
+        const newStarters = s.map((id: number | null) => id || null);
+        const newSubs = b.map((id: number | null) => id || null);
+
+        // If we transitioned to a matchday with team elimination (currentMatchday >= 4)
+        // and we had a full squad before, check if there are now nulls due to auto-removal
+        const hadFullSquad = starters.every(id => id !== null) && subs.every(id => id !== null) && starters.length === 11 && subs.length === 4;
+        const hasNullNow = newStarters.includes(null) || newSubs.includes(null);
+        
+        if (hadFullSquad && hasNullNow) {
+          const removedCount = newStarters.filter((id: any) => id === null).length + newSubs.filter((id: any) => id === null).length;
+          // Calculate remaining budget
+          const newSpent = [...newStarters, ...newSubs].reduce((sum, id) => {
+            if (id) {
+              const player = playerMap.get(id);
+              return sum + (player ? player.price : 0);
+            }
+            return sum;
+          }, 0);
+          setEliminationNotification({
+            removedCount,
+            remainingBudget: 100.0 - newSpent
+          });
+        }
+
+        setStarters(newStarters);
+        setSubs(newSubs);
         setCaptainId(cap);
         setViceCaptainId(vice);
+        setSelectedFormation(form || '4-4-2');
       } else {
         setStarters(Array(11).fill(null));
         setSubs(Array(4).fill(null));
         setCaptainId(null);
         setViceCaptainId(null);
+        setSelectedFormation('4-4-2');
       }
     } catch (err) {
       console.error("Failed to load squad state", err);
@@ -590,6 +622,20 @@ export default function Dashboard() {
   const remainingBudget = 100.0 - totalSpent;
   const squadSize = fullSquad.length;
 
+  const starterPositions = getFormationPositions(selectedFormation);
+  const gkIndices = starterPositions.map((pos, idx) => pos === 'GK' ? idx : -1).filter(idx => idx !== -1);
+  const defIndices = starterPositions.map((pos, idx) => pos === 'DEF' ? idx : -1).filter(idx => idx !== -1);
+  const midIndices = starterPositions.map((pos, idx) => pos === 'MID' ? idx : -1).filter(idx => idx !== -1);
+  const fwdIndices = starterPositions.map((pos, idx) => pos === 'FWD' ? idx : -1).filter(idx => idx !== -1);
+
+  const hasNullSlots = starters.includes(null) || subs.includes(null) || starters.length !== 11 || subs.length !== 4;
+  const hasEliminatedPlayers = [...starters, ...subs].some(id => {
+    if (!id) return false;
+    const player = playerMap.get(id);
+    return player && activeCountries.length > 0 && !activeCountries.includes(player.countryId);
+  });
+  const isUserSquadValidForSimulation = !hasNullSlots && !hasEliminatedPlayers;
+
   const countryCounts: Record<string, number> = {};
   for (const p of fullSquad) {
     countryCounts[p.countryId] = (countryCounts[p.countryId] || 0) + 1;
@@ -659,6 +705,9 @@ export default function Dashboard() {
       valA = a.lockedCapital;
       valB = b.lockedCapital;
     } else if (leaderboardSortField === 'pnl') {
+      valA = a.latestPnL !== undefined ? a.latestPnL : 0;
+      valB = b.latestPnL !== undefined ? b.latestPnL : 0;
+    } else if (leaderboardSortField === 'totalPnl') {
       valA = a.totalNetProfit;
       valB = b.totalNetProfit;
     }
@@ -721,9 +770,148 @@ export default function Dashboard() {
     }
   };
 
+  const handleFormationChange = (newFormation: string) => {
+    const oldPositions = getFormationPositions(selectedFormation);
+    const newPositions = getFormationPositions(newFormation);
+
+    const currentStartersByPos: Record<'GK' | 'DEF' | 'MID' | 'FWD', (number | null)[]> = {
+      GK: [],
+      DEF: [],
+      MID: [],
+      FWD: []
+    };
+
+    starters.forEach((id, idx) => {
+      if (id) {
+        const player = playerMap.get(id);
+        if (player) {
+          currentStartersByPos[player.position].push(id);
+        }
+      }
+    });
+
+    const newStarters = Array(11).fill(null);
+    const posCounters: Record<'GK' | 'DEF' | 'MID' | 'FWD', number> = {
+      GK: 0,
+      DEF: 0,
+      MID: 0,
+      FWD: 0
+    };
+
+    for (let i = 0; i < 11; i++) {
+      const neededPos = newPositions[i];
+      const count = posCounters[neededPos];
+      const availableList = currentStartersByPos[neededPos];
+      
+      if (count < availableList.length) {
+        newStarters[i] = availableList[count];
+        posCounters[neededPos]++;
+      } else {
+        newStarters[i] = null;
+      }
+    }
+
+    setStarters(newStarters);
+    setSelectedFormation(newFormation);
+
+    if (captainId && !newStarters.includes(captainId)) {
+      setCaptainId(null);
+    }
+    if (viceCaptainId && !newStarters.includes(viceCaptainId)) {
+      setViceCaptainId(null);
+    }
+  };
+
+  const getSquadValidationErrors = (): string[] => {
+    const errors: string[] = [];
+
+    // 1. Budget check
+    if (totalSpent > 100.0) {
+      errors.push(`Budget Limit Exceeded: Total squad price is $${totalSpent.toFixed(1)}M, which exceeds the $100.0M limit.`);
+    }
+
+    // 2. Squad slots check
+    const emptyStarters = starters.filter(id => id === null).length;
+    const emptySubs = subs.filter(id => id === null).length;
+    if (emptyStarters > 0 || emptySubs > 0) {
+      errors.push(`Empty Slots: You have ${emptyStarters} empty starting slots and ${emptySubs} empty bench slots. All 15 slots must be filled.`);
+    }
+
+    // 3. Country limit check (max 3 from same country)
+    for (const cId in countryCounts) {
+      if (countryCounts[cId] > 3) {
+        const countryName = seedData.countries.find(c => c.id === cId)?.name || cId;
+        errors.push(`Country Limit Exceeded: You have selected ${countryCounts[cId]} players from ${countryName} (max 3 allowed).`);
+      }
+    }
+
+    // 4. Position and formation matching check
+    const requiredPositions = getFormationPositions(selectedFormation);
+    starters.forEach((id, idx) => {
+      if (id) {
+        const player = playerMap.get(id);
+        if (player && player.position !== requiredPositions[idx]) {
+          errors.push(`Slot Position Mismatch: Starter slot ${idx + 1} requires a ${requiredPositions[idx]} player, but has ${player.name} (${player.position}).`);
+        }
+      }
+    });
+
+    // 5. Captain checks
+    if (captainId === null) {
+      errors.push("Missing Captain: You must select a captain from your starting XI.");
+    } else if (!starters.includes(captainId)) {
+      errors.push("Invalid Captain: Captain must be a player in your starting XI.");
+    }
+
+    // 6. Vice captain checks
+    if (viceCaptainId === null) {
+      errors.push("Missing Vice-Captain: You must select a vice-captain from your starting XI.");
+    } else if (!starters.includes(viceCaptainId)) {
+      errors.push("Invalid Vice-Captain: Vice-captain must be a player in your starting XI.");
+    } else if (viceCaptainId === captainId) {
+      errors.push("Invalid Roles: Captain and vice-captain cannot be the same player.");
+    }
+
+    // 7. Eliminated countries check
+    const eliminatedPlayers: string[] = [];
+    starters.forEach(id => {
+      if (id) {
+        const player = playerMap.get(id);
+        if (player && activeCountries.length > 0 && !activeCountries.includes(player.countryId)) {
+          eliminatedPlayers.push(player.name);
+        }
+      }
+    });
+    subs.forEach(id => {
+      if (id) {
+        const player = playerMap.get(id);
+        if (player && activeCountries.length > 0 && !activeCountries.includes(player.countryId)) {
+          eliminatedPlayers.push(player.name);
+        }
+      }
+    });
+    if (eliminatedPlayers.length > 0) {
+      errors.push(`Eliminated Players: The following players belong to eliminated countries and must be replaced: ${eliminatedPlayers.join(', ')}.`);
+    }
+
+    return errors;
+  };
+
   // Cryptographically Sign and Save Squad
   const saveSquad = async () => {
-    if (!isSquadSaveable) return;
+    if (!wallet) return;
+    if (!deposited) {
+      setErrorMsg("You must lock a stake before saving a squad.");
+      return;
+    }
+
+    const errors = getSquadValidationErrors();
+    if (errors.length > 0) {
+      setSquadValidationErrors(errors);
+      setShowValidationModal(true);
+      return;
+    }
+
     setTxLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -747,7 +935,7 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: wallet,
-          squad: { starters, subs, captainId, viceCaptainId },
+          squad: { starters, subs, captainId, viceCaptainId, formation: selectedFormation },
           signature,
           message
         })
@@ -1175,6 +1363,25 @@ export default function Dashboard() {
                           </p>
                         </div>
                       )}
+                    </div>                    {/* Pitch Toolbar with Formation Selector */}
+                    <div className="flex items-center justify-between bg-neutral-950 border border-neutral-900 rounded-3xl p-4 flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">TACTICS / FORMATION</span>
+                      </div>
+                      
+                      <div className="relative">
+                        <select
+                          value={selectedFormation}
+                          onChange={(e) => handleFormationChange(e.target.value)}
+                          className="bg-neutral-900 border border-neutral-800 text-neutral-200 text-xs font-bold px-3 py-1.5 rounded-xl outline-none focus:border-[#00ff55]/50 focus:ring-1 focus:ring-[#00ff55]/50 transition cursor-pointer"
+                        >
+                          {['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '5-3-2', '5-4-1'].map(form => (
+                            <option key={form} value={form} className="bg-neutral-950 font-bold text-neutral-300">
+                              {form}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     {/* Football Pitch */}
@@ -1183,24 +1390,27 @@ export default function Dashboard() {
                       <div className="absolute inset-x-0 top-0 h-1/2 border-b border-neutral-800/40 pointer-events-none"></div>
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/4 aspect-square border border-neutral-800/40 rounded-full pointer-events-none"></div>
                       
-                      {/* GK Position (1) */}
+                      {/* GK Position */}
                       <div className="flex justify-center">
-                        <PitchSlot 
-                          index={0} 
-                          position="GK" 
-                          playerId={starters[0]} 
-                          onRemove={(id) => handleRemovePlayer('starter', 0, id)}
-                          onSelect={() => setSelectedSlotIndex({ type: 'starter', index: 0 })}
-                          captainId={captainId}
-                          viceCaptainId={viceCaptainId}
-                          onSetRole={handleSetRole}
-                          playerMap={playerMap}
-                        />
+                        {gkIndices.map(idx => (
+                          <PitchSlot 
+                            key={idx}
+                            index={idx} 
+                            position="GK" 
+                            playerId={starters[idx]} 
+                            onRemove={(id) => handleRemovePlayer('starter', idx, id)}
+                            onSelect={() => setSelectedSlotIndex({ type: 'starter', index: idx })}
+                            captainId={captainId}
+                            viceCaptainId={viceCaptainId}
+                            onSetRole={handleSetRole}
+                            playerMap={playerMap}
+                          />
+                        ))}
                       </div>
 
-                      {/* DEF Position (4) */}
+                      {/* DEF Position */}
                       <div className="flex justify-around">
-                        {[1, 2, 3, 4].map(idx => (
+                        {defIndices.map(idx => (
                           <PitchSlot 
                             key={idx}
                             index={idx} 
@@ -1216,9 +1426,9 @@ export default function Dashboard() {
                         ))}
                       </div>
 
-                      {/* MID Position (4) */}
+                      {/* MID Position */}
                       <div className="flex justify-around">
-                        {[5, 6, 7, 8].map(idx => (
+                        {midIndices.map(idx => (
                           <PitchSlot 
                             key={idx}
                             index={idx} 
@@ -1234,9 +1444,9 @@ export default function Dashboard() {
                         ))}
                       </div>
 
-                      {/* FWD Position (2) */}
+                      {/* FWD Position */}
                       <div className="flex justify-around px-20">
-                        {[9, 10].map(idx => (
+                        {fwdIndices.map(idx => (
                           <PitchSlot 
                             key={idx}
                             index={idx} 
@@ -1281,23 +1491,32 @@ export default function Dashboard() {
                   {/* Right Column: Player Market / Selection Modal */}
                   <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 lg:sticky lg:top-[90px] h-full lg:max-h-[calc(100vh-130px)] min-h-0">
                     
-                    {/* Validation Panel */}
+                    {/* Squad Control Panel */}
                     <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col gap-4 flex-shrink-0">
-                      <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">Squad Validation</h3>
+                      <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">Squad Control Panel</h3>
                       
-                      <div className="flex flex-col gap-2 text-xs">
-                        <ValidationCheck label="Deposited & Registered" isValid={deposited} message="STAKE OKB required to save" />
-                        <ValidationCheck label="15 Players Drafted" isValid={isSquadSizeValid} message={`${squadSize} / 15 players selected`} />
-                        <ValidationCheck label="Under Budget ($100.0M)" isValid={isBudgetValid} message={`Remaining: $${remainingBudget.toFixed(1)}M`} />
-                        <ValidationCheck label="Starting Formation Valid" isValid={isFormationValid} message="Conforms to FPL rules (1 GK, 3+ DEF, 1+ FWD)" />
-                        <ValidationCheck label="Country Limit Check (Max 3)" isValid={!countryLimitExceeded} message="No more than 3 players from same country" />
-                        <ValidationCheck label="Captain Set" isValid={isCaptainValid} message="Select a starter as captain" />
-                        <ValidationCheck label="Vice-Captain Set" isValid={isViceCaptainValid} message="Select a different starter as vice-captain" />
+                      <div className="grid grid-cols-2 gap-3 text-xs bg-neutral-900/30 p-3 rounded-2xl border border-neutral-850">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider">Formation</span>
+                          <span className="font-bold text-neutral-200">{selectedFormation}</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider">Staged Players</span>
+                          <span className="font-bold text-neutral-200">{squadSize} / 15</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider">Budget Spent</span>
+                          <span className={`font-bold ${isBudgetValid ? 'text-[#00ff55]' : 'text-red-400'}`}>${totalSpent.toFixed(1)}M</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider">Budget Limit</span>
+                          <span className="font-bold text-neutral-400">$100.0M</span>
+                        </div>
                       </div>
 
                       <button 
                         onClick={saveSquad}
-                        disabled={!isSquadSaveable || txLoading}
+                        disabled={!wallet || !deposited || txLoading}
                         className="w-full bg-[#00ff55] hover:bg-[#02e04c] disabled:opacity-40 disabled:hover:bg-[#00ff55] disabled:cursor-not-allowed text-black font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2 transition duration-200 mt-2 shadow-lg shadow-emerald-500/10 cursor-pointer"
                       >
                         <ShieldCheck className="w-4.5 h-4.5" />
@@ -1309,7 +1528,7 @@ export default function Dashboard() {
                     <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col min-h-[400px] lg:min-h-0 flex-1 overflow-hidden">
                       <div className="flex items-center justify-between mb-4 flex-shrink-0">
                         <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">
-                          {selectedSlotIndex ? `SELECT ${getPositionName(selectedSlotIndex.type === 'starter' ? starters[selectedSlotIndex.index] ? playerMap.get(starters[selectedSlotIndex.index]!)?.position || '' : selectedSlotIndex.index === 0 ? 'GK' : selectedSlotIndex.index <= 4 ? 'DEF' : selectedSlotIndex.index <= 8 ? 'MID' : 'FWD' : selectedSlotIndex.index === 0 ? 'GK' : selectedSlotIndex.index === 1 ? 'DEF' : selectedSlotIndex.index === 2 ? 'MID' : 'FWD')}` : "PLAYER MARKET"}
+                          {selectedSlotIndex ? `SELECT ${getPositionName(selectedSlotIndex.type === 'starter' ? starterPositions[selectedSlotIndex.index] : (selectedSlotIndex.index === 0 ? 'GK' : selectedSlotIndex.index === 1 ? 'DEF' : selectedSlotIndex.index === 2 ? 'MID' : 'FWD'))}` : "PLAYER MARKET"}
                         </h3>
                         {selectedSlotIndex && (
                           <button 
@@ -1369,7 +1588,7 @@ export default function Dashboard() {
                             const slotType = selectedSlotIndex.type;
                             let targetPos = "";
                             if (slotType === 'starter') {
-                              targetPos = slotIndex === 0 ? 'GK' : slotIndex <= 4 ? 'DEF' : slotIndex <= 8 ? 'MID' : 'FWD';
+                              targetPos = starterPositions[slotIndex];
                             } else {
                               targetPos = slotIndex === 0 ? 'GK' : slotIndex === 1 ? 'DEF' : slotIndex === 2 ? 'MID' : 'FWD';
                             }
@@ -1461,14 +1680,21 @@ export default function Dashboard() {
                               SETTLE PAYOUTS ON X LAYER
                             </button>
                           ) : (
-                            <button 
-                              onClick={simulateCurrentMatchday}
-                              disabled={simulationLoading}
-                              className="bg-[#00ff55] hover:bg-[#02e04c] text-black font-black px-6 py-3.5 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer"
-                            >
-                              <Play className="w-4.5 h-4.5 fill-black" />
-                              {simulationLoading ? "SIMULATING..." : "SIMULATE MATCHES"}
-                            </button>
+                            <div className="flex flex-col gap-2">
+                              <button 
+                                onClick={simulateCurrentMatchday}
+                                disabled={simulationLoading || !isUserSquadValidForSimulation}
+                                className="bg-[#00ff55] hover:bg-[#02e04c] disabled:opacity-40 disabled:hover:bg-[#00ff55] disabled:cursor-not-allowed text-black font-black px-6 py-3.5 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer"
+                              >
+                                <Play className="w-4.5 h-4.5 fill-black" />
+                                {simulationLoading ? "SIMULATING..." : "SIMULATE MATCHES"}
+                              </button>
+                              {!isUserSquadValidForSimulation && (
+                                <p className="text-[10px] text-amber-500 font-bold max-w-xs leading-normal">
+                                  ⚠️ Simulation blocked: Fix your squad (all 15 slots must be filled with active players, no eliminated countries).
+                                </p>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -1723,9 +1949,22 @@ export default function Dashboard() {
                                     setLeaderboardSortAsc(false);
                                   }
                                 }}
-                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none"
+                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none whitespace-nowrap"
                               >
-                                Net Profit {leaderboardSortField === 'pnl' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                                Matchday PnL {leaderboardSortField === 'pnl' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                              </th>
+                              <th 
+                                onClick={() => {
+                                  if (leaderboardSortField === 'totalPnl') {
+                                    setLeaderboardSortAsc(!leaderboardSortAsc);
+                                  } else {
+                                    setLeaderboardSortField('totalPnl');
+                                    setLeaderboardSortAsc(false);
+                                  }
+                                }}
+                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none whitespace-nowrap"
+                              >
+                                Total PnL {leaderboardSortField === 'totalPnl' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
                               </th>
                               <th className="px-4 py-3 text-center">Status</th>
                             </tr>
@@ -1755,7 +1994,10 @@ export default function Dashboard() {
                                     {(item.lockedCapital !== undefined ? item.lockedCapital : 0.8).toFixed(4)} OKB
                                   </td>
                                   <td className="px-4 py-3 text-center font-bold text-neutral-200">{item.totalScore} pts</td>
-                                  <td className={`px-4 py-3 text-center font-mono font-bold ${item.totalNetProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
+                                  <td className={`px-4 py-3 text-center font-mono font-bold whitespace-nowrap ${item.latestPnL >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
+                                    {item.latestPnL >= 0 ? '+' : ''}{item.latestPnL.toFixed(4)} OKB
+                                  </td>
+                                  <td className={`px-4 py-3 text-center font-mono font-bold whitespace-nowrap ${item.totalNetProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
                                     {item.totalNetProfit >= 0 ? '+' : ''}{item.totalNetProfit.toFixed(4)} OKB
                                   </td>
                                   <td className="px-4 py-3 text-center">
@@ -1852,6 +2094,80 @@ export default function Dashboard() {
                 </a>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Squad Validation Modal */}
+      {showValidationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-6 max-w-md w-full flex flex-col gap-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setShowValidationModal(false)}
+              className="absolute right-4 top-4 text-neutral-500 hover:text-neutral-300 transition"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="text-center flex flex-col items-center gap-2">
+              <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-full text-red-500">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black tracking-tight text-neutral-200">Cannot Lock Squad</h3>
+              <p className="text-xs text-neutral-500">Your squad does not meet all tournament regulations. Please address the errors below.</p>
+            </div>
+
+            <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto pr-1">
+              {squadValidationErrors.map((err, idx) => (
+                <div key={idx} className="bg-neutral-900/50 border border-neutral-900 rounded-xl p-3 flex gap-2 text-xs text-neutral-300 leading-normal">
+                  <span className="text-red-500 font-bold flex-shrink-0 mt-0.5">•</span>
+                  <span>{err}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowValidationModal(false)}
+              className="w-full bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-200 font-black py-3 rounded-2xl text-xs transition duration-200 mt-2 cursor-pointer"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Eliminated Players Notification Modal */}
+      {eliminationNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-6 max-w-sm w-full flex flex-col gap-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setEliminationNotification(null)}
+              className="absolute right-4 top-4 text-neutral-500 hover:text-neutral-300 transition"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="text-center flex flex-col items-center gap-2">
+              <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-full text-amber-500">
+                <Users className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black tracking-tight text-neutral-200">Players Eliminated</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed mt-1">
+                <span className="font-bold text-neutral-200">{eliminationNotification.removedCount} players</span> in your squad belong to eliminated countries and have been auto-removed. 
+                Your budget has been refunded. You now have <span className="font-bold text-[#00ff55] font-mono">${eliminationNotification.remainingBudget.toFixed(1)}M</span> available to draft replacement players from active countries.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setEliminationNotification(null)}
+              className="w-full bg-[#00ff55] hover:bg-[#02e04c] text-black font-black py-3 rounded-2xl text-xs transition duration-200 mt-2 cursor-pointer shadow-lg shadow-emerald-500/10"
+            >
+              Draft Replacements
+            </button>
           </div>
         </div>
       )}
