@@ -168,6 +168,7 @@ export default function Dashboard() {
   const [marketSearch, setMarketSearch] = useState<string>('');
   const [marketCountry, setMarketCountry] = useState<string>('ALL');
   const [marketSort, setMarketSort] = useState<'rating' | 'price'>('rating');
+  const [marketSortAsc, setMarketSortAsc] = useState<boolean>(false);
 
   // Modal / Selection states
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<{ type: 'starter' | 'sub'; index: number } | null>(null);
@@ -1254,8 +1255,10 @@ export default function Dashboard() {
   });
 
   filteredPlayers.sort((a, b) => {
-    if (marketSort === 'rating') return b.rating - a.rating;
-    return b.price - a.price;
+    if (marketSort === 'rating') {
+      return marketSortAsc ? a.rating - b.rating : b.rating - a.rating;
+    }
+    return marketSortAsc ? a.price - b.price : b.price - a.price;
   });
 
   const getPositionName = (pos: string) => {
@@ -1898,14 +1901,27 @@ export default function Dashboard() {
                           )}
                           
                           {/* Sort */}
-                          <select 
-                            value={marketSort} 
-                            onChange={(e) => setMarketSort(e.target.value as any)}
-                            className={`bg-neutral-900 border border-neutral-850 rounded-xl px-3 py-2 text-xs focus:outline-none text-neutral-300 font-medium ${selectedSlotIndex ? 'col-span-2' : ''}`}
-                          >
-                            <option value="rating">Sort by Rating</option>
-                            <option value="price">Sort by Price</option>
-                          </select>
+                          <div className={`flex items-stretch gap-1.5 ${selectedSlotIndex ? 'col-span-2' : ''}`}>
+                            <select 
+                              value={marketSort} 
+                              onChange={(e) => setMarketSort(e.target.value as any)}
+                              className="flex-1 bg-neutral-900 border border-neutral-850 rounded-xl px-3 py-2 text-xs focus:outline-none text-neutral-300 font-medium"
+                            >
+                              <option value="rating">Sort by Rating</option>
+                              <option value="price">Sort by Price</option>
+                            </select>
+                            
+                            <button
+                              onClick={() => setMarketSortAsc(!marketSortAsc)}
+                              type="button"
+                              className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-850 hover:border-neutral-800 text-neutral-300 hover:text-neutral-100 rounded-xl px-3 flex items-center justify-center transition duration-150 cursor-pointer"
+                              title={marketSortAsc ? "Sort Ascending (Lowest to Highest)" : "Sort Descending (Highest to Lowest)"}
+                            >
+                              <span className="text-xs font-mono font-bold">
+                                {marketSortAsc ? '▲' : '▼'}
+                              </span>
+                            </button>
+                          </div>
                         </div>
                       </div>
 
