@@ -1920,36 +1920,42 @@ export default function Dashboard() {
                           .map(player => {
                             const isAdded = starters.includes(player.id) || subs.includes(player.id);
                             const country = seedData.countries.find(c => c.id === player.countryId);
+                            const isEliminated = activeCountries.length > 0 && !activeCountries.includes(player.countryId);
 
                             return (
                               <div 
                                 key={player.id} 
-                                className={`bg-neutral-900/40 border border-neutral-900 rounded-xl p-3 flex items-center justify-between transition-all hover:bg-neutral-900/80 ${isAdded ? 'opacity-40' : ''}`}
+                                className={`bg-neutral-900/40 border border-neutral-900 rounded-xl p-3 flex items-center justify-between transition-all hover:bg-neutral-900/80 ${isAdded || isEliminated ? 'opacity-40' : ''}`}
                               >
                                 <div className="flex items-center gap-2.5">
                                   <span className="text-xl">{country?.flag || '🏳️'}</span>
                                   <div>
-                                    <h4 className="text-xs font-bold text-neutral-200">{player.name}</h4>
+                                    <div className="flex items-center gap-1.5">
+                                      <h4 className={`text-xs font-bold ${isEliminated ? 'text-neutral-500 line-through' : 'text-neutral-200'}`}>{player.name}</h4>
+                                      {isEliminated && (
+                                        <span className="text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-black tracking-wider uppercase">Eliminated</span>
+                                      )}
+                                    </div>
                                     <div className="flex items-center gap-2 mt-0.5">
                                       <span className="text-[10px] bg-neutral-850 text-neutral-400 px-1.5 py-0.5 rounded font-black tracking-wider">{player.position}</span>
-                                      <span className="text-[10px] text-neutral-500 font-bold">{country?.name}</span>
+                                      <span className={`text-[10px] font-bold ${isEliminated ? 'text-red-400/60' : 'text-neutral-500'}`}>{country?.name}</span>
                                     </div>
                                   </div>
                                 </div>
                                 
                                 <div className="flex items-center gap-3.5">
                                   <div className="text-right">
-                                    <p className="text-xs font-black text-[#00ff55]">${player.price.toFixed(1)}M</p>
+                                    <p className={`text-xs font-black ${isEliminated ? 'text-neutral-600' : 'text-[#00ff55]'}`}>${player.price.toFixed(1)}M</p>
                                     <p className="text-[10px] text-neutral-500 font-bold">Rating: {player.rating}</p>
                                   </div>
                                   
                                   {selectedSlotIndex ? (
                                     <button
-                                      disabled={isAdded}
+                                      disabled={isAdded || isEliminated}
                                       onClick={() => handleSelectPlayer(player)}
-                                      className="bg-neutral-850 hover:bg-neutral-800 border border-neutral-800 disabled:opacity-50 text-neutral-300 font-black px-3 py-1.5 rounded-lg text-[10px] uppercase transition cursor-pointer"
+                                      className={`border font-black px-3 py-1.5 rounded-lg text-[10px] uppercase transition ${isEliminated ? 'bg-red-500/10 border-red-500/20 text-red-400/60 cursor-not-allowed' : 'bg-neutral-850 hover:bg-neutral-800 border-neutral-800 disabled:opacity-50 text-neutral-300 cursor-pointer'}`}
                                     >
-                                      Select
+                                      {isEliminated ? 'Out' : 'Select'}
                                     </button>
                                   ) : (
                                     <button
