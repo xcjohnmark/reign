@@ -280,42 +280,55 @@ export default function Dashboard() {
         });
 
         // 1. Fetch native balance of OKB
-        const rawBalance = await provider.request({
-          method: 'eth_getBalance',
-          params: [wallet, 'latest']
-        });
-        const balanceVal = BigInt(rawBalance);
+        try {
+          const rawBalance = await provider.request({
+            method: 'eth_getBalance',
+            params: [wallet, 'latest']
+          });
+          const balanceVal = BigInt(rawBalance);
+          setBalanceOKB(parseFloat(formatEther(balanceVal)));
+        } catch (balErr) {
+          console.error("Failed to fetch native OKB balance via provider", balErr);
+        }
 
-        // 2. Fetch ReignPool user deposits
-        const depVal = await publicClient.readContract({
-          address: POOL_ADDRESS as `0x${string}`,
-          abi: reignPoolAbi,
-          functionName: 'userDeposits',
-          args: [wallet as `0x${string}`]
-        }) as bigint;
+        // 2. Fetch ReignPool details (wrapped in an isolated try-catch)
+        let depVal = 0n;
+        let profitVal = 0n;
+        let endVal = false;
 
-        // 3. Fetch ReignPool withdrawableProfit
-        const profitVal = await publicClient.readContract({
-          address: POOL_ADDRESS as `0x${string}`,
-          abi: reignPoolAbi,
-          functionName: 'withdrawableProfit',
-          args: [wallet as `0x${string}`]
-        }) as bigint;
+        try {
+          depVal = await publicClient.readContract({
+            address: POOL_ADDRESS as `0x${string}`,
+            abi: reignPoolAbi,
+            functionName: 'userDeposits',
+            args: [wallet as `0x${string}`]
+          }) as bigint;
 
-        // 4. Fetch epochEnded
-        const endVal = await publicClient.readContract({
-          address: POOL_ADDRESS as `0x${string}`,
-          abi: reignPoolAbi,
-          functionName: 'epochEnded'
-        }) as boolean;
+          profitVal = await publicClient.readContract({
+            address: POOL_ADDRESS as `0x${string}`,
+            abi: reignPoolAbi,
+            functionName: 'withdrawableProfit',
+            args: [wallet as `0x${string}`]
+          }) as bigint;
 
-        setBalanceOKB(parseFloat(formatEther(balanceVal)));
-        setDeposited(depVal > 0n);
-        setLockedPrincipal(parseFloat(formatEther(depVal)));
-        setWithdrawableProfit(parseFloat(formatEther(profitVal)));
-        setEpochEnded(endVal);
+          endVal = await publicClient.readContract({
+            address: POOL_ADDRESS as `0x${string}`,
+            abi: reignPoolAbi,
+            functionName: 'epochEnded'
+          }) as boolean;
+
+          setDeposited(depVal > 0n);
+          setLockedPrincipal(parseFloat(formatEther(depVal)));
+          setWithdrawableProfit(parseFloat(formatEther(profitVal)));
+          setEpochEnded(endVal);
+        } catch (contractErr) {
+          console.warn("Real Web3 contracts check failed (contract may not be deployed at address):", contractErr);
+          setDeposited(false);
+          setLockedPrincipal(0);
+          setWithdrawableProfit(0);
+        }
       } catch (err) {
-        console.warn("Real Web3 contracts check failed, make sure local Hardhat node is running", err);
+        console.error("Failed to load real Web3 state", err);
       }
     }
   };
