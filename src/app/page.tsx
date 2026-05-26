@@ -1489,7 +1489,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Right Column: Player Market / Selection Modal */}
-                  <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 lg:sticky lg:top-[90px] h-full lg:max-h-[calc(100vh-130px)] min-h-0">
+                  <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 lg:self-stretch min-h-0">
                     
                     {/* Squad Control Panel */}
                     <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col gap-4 flex-shrink-0">
@@ -1525,7 +1525,8 @@ export default function Dashboard() {
                     </div>
 
                     {/* Market / Selector panel */}
-                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col min-h-[400px] lg:min-h-[500px] flex-1 overflow-hidden">
+                    <div className="lg:sticky lg:top-[90px] lg:max-h-[calc(100vh-130px)] flex flex-col flex-1 min-h-0">
+                      <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col min-h-[400px] lg:min-h-[500px] flex-1 overflow-hidden">
                       <div className="flex items-center justify-between mb-4 flex-shrink-0">
                         <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">
                           {selectedSlotIndex ? `SELECT ${getPositionName(selectedSlotIndex.type === 'starter' ? starterPositions[selectedSlotIndex.index] : (selectedSlotIndex.index === 0 ? 'GK' : selectedSlotIndex.index === 1 ? 'DEF' : selectedSlotIndex.index === 2 ? 'MID' : 'FWD'))}` : "PLAYER MARKET"}
@@ -1645,6 +1646,7 @@ export default function Dashboard() {
                           </div>
                         )}
                       </div>
+                    </div>
                     </div>
                   </div>
                 </div>
