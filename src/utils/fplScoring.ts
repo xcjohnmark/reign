@@ -305,3 +305,21 @@ export function getFormationPositions(formation?: string): ('GK' | 'DEF' | 'MID'
       return ['GK', 'DEF', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'MID', 'MID', 'FWD', 'FWD'];
   }
 }
+
+/**
+ * Returns the maximum number of players allowed from the same country based on the matchday.
+ */
+export function getMaxPlayersPerCountry(matchday: number): number {
+  if (matchday <= 4) return 3; // MD 1-3 Groups, MD 4 Round of 16
+  if (matchday === 5) return 4; // MD 5 Quarter-finals
+  if (matchday === 6) return 6; // MD 6 Semi-finals
+  return 10; // MD 7 Finals (future-proof ceiling of 10)
+}
+
+/**
+ * Returns the maximum squad budget allowed based on the matchday.
+ */
+export function getMaxBudget(matchday: number): number {
+  return 100.0; // Option A: Keep budget strictly at $100.0M for all matchdays
+}
+

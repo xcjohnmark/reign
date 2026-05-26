@@ -7,7 +7,7 @@ import {
   CheckCircle, TrendingUp, Info, LogOut, Eye, Trophy 
 } from 'lucide-react';
 import seedData from '../data/seedData.json';
-import { isValidFormation, Player, getFormationPositions, calculateTeamScore, calculatePlayerPoints, performAutoSubstitutions } from '../utils/fplScoring';
+import { isValidFormation, Player, getFormationPositions, calculateTeamScore, calculatePlayerPoints, performAutoSubstitutions, getMaxPlayersPerCountry, getMaxBudget } from '../utils/fplScoring';
 
 // ABIs for real contract interactions
 const mockUsdtAbi = [
@@ -462,7 +462,7 @@ export default function Dashboard() {
           }, 0);
           setEliminationNotification({
             removedCount,
-            remainingBudget: 100.0 - newSpent
+            remainingBudget: getMaxBudget(data.currentMatchday) - newSpent
           });
         }
 
@@ -716,7 +716,7 @@ export default function Dashboard() {
   const fullSquad = [...selectedStartersFull, ...selectedSubsFull];
 
   const totalSpent = fullSquad.reduce((sum, p) => sum + p.price, 0);
-  const remainingBudget = 100.0 - totalSpent;
+  const remainingBudget = getMaxBudget(currentMatchday) - totalSpent;
   const squadSize = fullSquad.length;
 
   const starterPositions = getFormationPositions(selectedFormation);
@@ -744,8 +744,9 @@ export default function Dashboard() {
   const isFormationValid = isValidFormation(selectedStartersFull);
   
   let countryLimitExceeded = false;
+  const maxPlayersPerCountry = getMaxPlayersPerCountry(currentMatchday);
   for (const cId in countryCounts) {
-    if (countryCounts[cId] > 3) {
+    if (countryCounts[cId] > maxPlayersPerCountry) {
       countryLimitExceeded = true;
     }
   }
@@ -1007,8 +1008,9 @@ export default function Dashboard() {
     const errors: string[] = [];
 
     // 1. Budget check
-    if (totalSpent > 100.0) {
-      errors.push(`Budget Limit Exceeded: Total squad price is $${totalSpent.toFixed(1)}M, which exceeds the $100.0M limit.`);
+    const maxBudget = getMaxBudget(currentMatchday);
+    if (totalSpent > maxBudget) {
+      errors.push(`Budget Limit Exceeded: Total squad price is $${totalSpent.toFixed(1)}M, which exceeds the $${maxBudget.toFixed(1)}M limit.`);
     }
 
     // 2. Squad slots check
@@ -1018,11 +1020,12 @@ export default function Dashboard() {
       errors.push(`Empty Slots: You have ${emptyStarters} empty starting slots and ${emptySubs} empty bench slots. All 15 slots must be filled.`);
     }
 
-    // 3. Country limit check (max 3 from same country)
+    // 3. Country limit check (dynamic limit)
+    const maxPlayersPerCountry = getMaxPlayersPerCountry(currentMatchday);
     for (const cId in countryCounts) {
-      if (countryCounts[cId] > 3) {
+      if (countryCounts[cId] > maxPlayersPerCountry) {
         const countryName = seedData.countries.find(c => c.id === cId)?.name || cId;
-        errors.push(`Country Limit Exceeded: You have selected ${countryCounts[cId]} players from ${countryName} (max 3 allowed).`);
+        errors.push(`Country Limit Exceeded: You have selected ${countryCounts[cId]} players from ${countryName} (max ${maxPlayersPerCountry} allowed).`);
       }
     }
 
@@ -1594,13 +1597,13 @@ export default function Dashboard() {
                         <div className="flex justify-between text-xs font-black text-neutral-400">
                           <span>BUDGET SPENT</span>
                           <span className={isBudgetValid ? 'text-[#00ff55]' : 'text-red-500'}>
-                            ${totalSpent.toFixed(1)}M / $100.0M
+                            ${totalSpent.toFixed(1)}M / ${getMaxBudget(currentMatchday).toFixed(1)}M
                           </span>
                         </div>
                         <div className="w-full bg-neutral-900 h-2.5 rounded-full overflow-hidden border border-neutral-800">
                           <div 
                             className={`h-full transition-all duration-300 ${isBudgetValid ? 'bg-gradient-to-r from-emerald-500 to-[#00ff55]' : 'bg-red-500'}`} 
-                            style={{ width: `${Math.min(totalSpent, 100)}%` }}
+                            style={{ width: `${Math.min((totalSpent / getMaxBudget(currentMatchday)) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -1823,7 +1826,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[10px] font-black text-neutral-500 uppercase tracking-wider">Budget Limit</span>
-                          <span className="font-bold text-neutral-400">$100.0M</span>
+                          <span className="font-bold text-neutral-400">${getMaxBudget(currentMatchday).toFixed(1)}M</span>
                         </div>
                       </div>
 

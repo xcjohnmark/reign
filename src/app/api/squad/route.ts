@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recoverMessageAddress } from "viem";
-import { Player, isValidFormation, getFormationPositions } from "../../../utils/fplScoring";
+import { Player, isValidFormation, getFormationPositions, getMaxPlayersPerCountry, getMaxBudget } from "../../../utils/fplScoring";
 import { readState, writeState, getSeedData } from "../../../utils/gameStateHandler";
 
 export async function GET(request: NextRequest) {
@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Validate Squad Structure & Constraints
+    const state = readState();
+    const currentMatchday = state.currentMatchday;
     const seed = getSeedData();
     const players: Player[] = seed.players;
     const playerMap = new Map(players.map(p => [p.id, p]));
@@ -91,20 +93,23 @@ export async function POST(request: NextRequest) {
       allSquadPlayers.push(p);
     }
 
-    // Validate budget (<= $100M)
+    // Validate budget (<= Max Budget based on matchday)
+    const maxBudget = getMaxBudget(currentMatchday);
     const totalPrice = allSquadPlayers.reduce((sum, p) => sum + p.price, 0);
-    if (totalPrice > 100.0) {
-      return NextResponse.json({ error: `Squad exceeds $100M budget limit (Total: $${totalPrice.toFixed(1)}M)` }, { status: 400 });
+    if (totalPrice > maxBudget) {
+      return NextResponse.json({ error: `Squad exceeds $${maxBudget.toFixed(1)}M budget limit (Total: $${totalPrice.toFixed(1)}M)` }, { status: 400 });
     }
 
-    // Validate country limit (max 3 players from same country)
+    // Validate country limit (dynamic based on matchday)
+    const maxPlayersPerCountry = getMaxPlayersPerCountry(currentMatchday);
     const countryCounts: Record<string, number> = {};
     for (const p of allSquadPlayers) {
       countryCounts[p.countryId] = (countryCounts[p.countryId] || 0) + 1;
-      if (countryCounts[p.countryId] > 3) {
-        return NextResponse.json({ error: `Max 3 players from the same country allowed (${p.countryId} has ${countryCounts[p.countryId]})` }, { status: 400 });
+      if (countryCounts[p.countryId] > maxPlayersPerCountry) {
+        return NextResponse.json({ error: `Max ${maxPlayersPerCountry} players from the same country allowed (${p.countryId} has ${countryCounts[p.countryId]})` }, { status: 400 });
       }
     }
+
 
     // Validate starting XI formation rules
     if (!isValidFormation(starterPlayers)) {
@@ -132,7 +137,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Save/Update in gameState.json
-    const state = readState();
     
     // Check if user is already registered (if not, add them, otherwise update)
     let user = state.users.find(u => u.wallet.toLowerCase() === walletAddress.toLowerCase());

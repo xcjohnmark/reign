@@ -1,14 +1,14 @@
-import { Player, Squad } from "./fplScoring";
+import { Player, Squad, getMaxPlayersPerCountry, getMaxBudget } from "./fplScoring";
 
 /**
  * Generates a randomized but fully valid squad of 15 players adhering to:
- * - Total price <= $100M
- * - Max 3 players from the same country
+ * - Total price <= Max Budget (based on matchday)
+ * - Max players from the same country (based on matchday)
  * - 2 GKs, 5 DEFs, 5 MIDs, 3 FWDs
  * - Selects a valid starting XI (1 GK, 4 DEF, 4 MID, 2 FWD)
  * - Assigns captain and vice-captain from starters
  */
-export function generateValidSquad(allPlayers: Player[]): Squad {
+export function generateValidSquad(allPlayers: Player[], matchday: number = 1): Squad {
   const gks = allPlayers.filter(p => p.position === 'GK');
   const defs = allPlayers.filter(p => p.position === 'DEF');
   const mids = allPlayers.filter(p => p.position === 'MID');
@@ -28,19 +28,21 @@ export function generateValidSquad(allPlayers: Player[]): Squad {
 
     // 2. Validate budget
     const totalPrice = squadPlayers.reduce((sum, p) => sum + p.price, 0);
-    if (totalPrice > 100.0) continue;
+    if (totalPrice > getMaxBudget(matchday)) continue;
 
-    // 3. Validate country limit (max 3 from same country)
+    // 3. Validate country limit (max country limit based on matchday)
     const countryCounts: Record<string, number> = {};
     let countryValid = true;
+    const maxPlayersPerCountry = getMaxPlayersPerCountry(matchday);
     for (const p of squadPlayers) {
       countryCounts[p.countryId] = (countryCounts[p.countryId] || 0) + 1;
-      if (countryCounts[p.countryId] > 3) {
+      if (countryCounts[p.countryId] > maxPlayersPerCountry) {
         countryValid = false;
         break;
       }
     }
     if (!countryValid) continue;
+
 
     // If budget and country counts are valid, build the Squad object
     // Starters (4-4-2 formation):
