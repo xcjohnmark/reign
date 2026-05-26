@@ -1127,14 +1127,25 @@ export default function Dashboard() {
       } else {
         // Real Web3 Payout Settle
         const { createWalletClient, custom } = await import('viem');
+        
+        const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
+        if (!provider) throw new Error("No wallet provider detected");
+
+        const cIdHex = await provider.request({ method: 'eth_chainId' });
+        const currentChainId = parseInt(cIdHex, 16);
+        const isLocal = currentChainId === 31337 || currentChainId === 1337;
+        const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech";
+        const activeChainId = isLocal ? currentChainId : 195;
+        const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
+
         const walletClient = createWalletClient({
           chain: {
-            id: 31337,
-            name: "Localhost",
-            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-            rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } }
+            id: activeChainId,
+            name: activeChainName,
+            nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
+            rpcUrls: { default: { http: [activeRpc] } }
           },
-          transport: custom((window as any).ethereum)
+          transport: custom(provider)
         });
 
         // Convert profits/losses back to BigInt values
