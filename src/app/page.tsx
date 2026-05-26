@@ -217,7 +217,7 @@ export default function Dashboard() {
       const handleChainChanged = (cIdHex: string) => {
         const newChainId = parseInt(cIdHex, 16);
         setChainId(newChainId);
-        setIsWrongNetwork(newChainId !== 195);
+        setIsWrongNetwork(newChainId !== 195 && newChainId !== 31337 && newChainId !== 1337);
         loadWeb3State();
       };
 
@@ -267,16 +267,21 @@ export default function Dashboard() {
         const cIdHex = await provider.request({ method: 'eth_chainId' });
         const currentChainId = parseInt(cIdHex, 16);
         setChainId(currentChainId);
-        setIsWrongNetwork(currentChainId !== 195);
+        setIsWrongNetwork(currentChainId !== 195 && currentChainId !== 31337 && currentChainId !== 1337);
+
+        const isLocal = currentChainId === 31337 || currentChainId === 1337;
+        const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech";
+        const activeChainId = isLocal ? currentChainId : 195;
+        const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
 
         const publicClient = createPublicClient({
           chain: {
-            id: 195,
-            name: "X Layer Testnet",
+            id: activeChainId,
+            name: activeChainName,
             nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
-            rpcUrls: { default: { http: ["https://testrpc.xlayer.tech"] } }
+            rpcUrls: { default: { http: [activeRpc] } }
           },
-          transport: http("https://testrpc.xlayer.tech")
+          transport: http(activeRpc)
         });
 
         // 1. Fetch native balance of OKB
@@ -483,7 +488,7 @@ export default function Dashboard() {
         const cIdHex = await provider.request({ method: 'eth_chainId' });
         const currentChainId = parseInt(cIdHex, 16);
         setChainId(currentChainId);
-        if (currentChainId !== 195) {
+        if (currentChainId !== 195 && currentChainId !== 31337 && currentChainId !== 1337) {
           setIsWrongNetwork(true);
           setNetworkSwitching(true);
           try {
@@ -585,12 +590,19 @@ export default function Dashboard() {
       const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
       if (!provider) throw new Error("No wallet provider detected");
       
+      const cIdHex = await provider.request({ method: 'eth_chainId' });
+      const currentChainId = parseInt(cIdHex, 16);
+      const isLocal = currentChainId === 31337 || currentChainId === 1337;
+      const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech";
+      const activeChainId = isLocal ? currentChainId : 195;
+      const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
+
       const walletClient = createWalletClient({
         chain: {
-          id: 195,
-          name: "X Layer Testnet",
+          id: activeChainId,
+          name: activeChainName,
           nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
-          rpcUrls: { default: { http: ["https://testrpc.xlayer.tech"] } }
+          rpcUrls: { default: { http: [activeRpc] } }
         },
         transport: custom(provider)
       });
