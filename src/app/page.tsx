@@ -105,7 +105,7 @@ const reignPoolAbi = [
 
 // Contract Addresses (Hardhat localhost defaults)
 const USDT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const POOL_ADDRESS = "0x8B13a15896A9E6d9c456423E2B686b739c022bc4";
+const POOL_ADDRESS = "0xff6C80813A67Cd3d30a9bF11Ce88F439EC1fe9aC";
 
 
 export default function Dashboard() {
@@ -237,6 +237,61 @@ export default function Dashboard() {
   useEffect(() => {
     loadSimulatorState();
   }, [currentMatchday]);
+
+  // Auto-remove eliminated players from the current draft squad when activeCountries updates
+  useEffect(() => {
+    if (activeCountries.length === 0 || playerMap.size === 0) return;
+
+    setStarters(prevStarters => {
+      let changed = false;
+      const next = prevStarters.map(id => {
+        if (id) {
+          const player = playerMap.get(id);
+          if (player && !activeCountries.includes(player.countryId)) {
+            changed = true;
+            return null;
+          }
+        }
+        return id;
+      });
+      return changed ? next : prevStarters;
+    });
+
+    setSubs(prevSubs => {
+      let changed = false;
+      const next = prevSubs.map(id => {
+        if (id) {
+          const player = playerMap.get(id);
+          if (player && !activeCountries.includes(player.countryId)) {
+            changed = true;
+            return null;
+          }
+        }
+        return id;
+      });
+      return changed ? next : prevSubs;
+    });
+
+    setCaptainId(prevCap => {
+      if (prevCap) {
+        const player = playerMap.get(prevCap);
+        if (player && !activeCountries.includes(player.countryId)) {
+          return null;
+        }
+      }
+      return prevCap;
+    });
+
+    setViceCaptainId(prevVice => {
+      if (prevVice) {
+        const player = playerMap.get(prevVice);
+        if (player && !activeCountries.includes(player.countryId)) {
+          return null;
+        }
+      }
+      return prevVice;
+    });
+  }, [activeCountries, playerMap]);
 
   // --- API / Web3 Integrations ---
 
