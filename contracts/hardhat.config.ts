@@ -24,8 +24,8 @@ export default defineConfig({
     },
     xlayerTestnet: {
       type: "http",
-      url: "https://testrpc.xlayer.tech",
-      chainId: 195,
+      url: "https://testrpc.xlayer.tech/terigon",
+      chainId: 1952,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     }
   },

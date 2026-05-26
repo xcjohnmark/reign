@@ -105,7 +105,7 @@ const reignPoolAbi = [
 
 // Contract Addresses (Hardhat localhost defaults)
 const USDT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const POOL_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+const POOL_ADDRESS = "0x8B13a15896A9E6d9c456423E2B686b739c022bc4";
 
 
 export default function Dashboard() {
@@ -217,7 +217,7 @@ export default function Dashboard() {
       const handleChainChanged = (cIdHex: string) => {
         const newChainId = parseInt(cIdHex, 16);
         setChainId(newChainId);
-        setIsWrongNetwork(newChainId !== 195 && newChainId !== 31337 && newChainId !== 1337);
+        setIsWrongNetwork(newChainId !== 1952 && newChainId !== 31337 && newChainId !== 1337);
         loadWeb3State();
       };
 
@@ -267,11 +267,11 @@ export default function Dashboard() {
         const cIdHex = await provider.request({ method: 'eth_chainId' });
         const currentChainId = parseInt(cIdHex, 16);
         setChainId(currentChainId);
-        setIsWrongNetwork(currentChainId !== 195 && currentChainId !== 31337 && currentChainId !== 1337);
+        setIsWrongNetwork(currentChainId !== 1952 && currentChainId !== 31337 && currentChainId !== 1337);
 
         const isLocal = currentChainId === 31337 || currentChainId === 1337;
-        const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech";
-        const activeChainId = isLocal ? currentChainId : 195;
+        const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech/terigon";
+        const activeChainId = isLocal ? currentChainId : 1952;
         const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
 
         const publicClient = createPublicClient({
@@ -344,7 +344,7 @@ export default function Dashboard() {
     try {
       await provider.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0xC3' }], // 195 in hex
+        params: [{ chainId: '0x7A0' }], // 1952 in hex
       });
       setIsWrongNetwork(false);
     } catch (switchError: any) {
@@ -354,14 +354,14 @@ export default function Dashboard() {
             method: 'wallet_addEthereumChain',
             params: [
               {
-                chainId: '0xC3',
+                chainId: '0x7A0',
                 chainName: 'X Layer Testnet',
                 nativeCurrency: {
                   name: 'OKB',
                   symbol: 'OKB',
                   decimals: 18,
                 },
-                rpcUrls: ['https://testrpc.xlayer.tech'],
+                rpcUrls: ['https://testrpc.xlayer.tech/terigon'],
                 blockExplorerUrls: ['https://www.okx.com/explorer/xlayer-testnet'],
               },
             ],
@@ -488,13 +488,13 @@ export default function Dashboard() {
         const cIdHex = await provider.request({ method: 'eth_chainId' });
         const currentChainId = parseInt(cIdHex, 16);
         setChainId(currentChainId);
-        if (currentChainId !== 195 && currentChainId !== 31337 && currentChainId !== 1337) {
+        if (currentChainId !== 1952 && currentChainId !== 31337 && currentChainId !== 1337) {
           setIsWrongNetwork(true);
           setNetworkSwitching(true);
           try {
             await provider.request({
               method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0xC3' }], // 195 in hex
+              params: [{ chainId: '0x7A0' }], // 1952 in hex
             });
             setIsWrongNetwork(false);
           } catch (switchError: any) {
@@ -504,14 +504,14 @@ export default function Dashboard() {
                   method: 'wallet_addEthereumChain',
                   params: [
                     {
-                      chainId: '0xC3',
+                      chainId: '0x7A0',
                       chainName: 'X Layer Testnet',
                       nativeCurrency: {
                         name: 'OKB',
                         symbol: 'OKB',
                         decimals: 18,
                       },
-                      rpcUrls: ['https://testrpc.xlayer.tech'],
+                      rpcUrls: ['https://testrpc.xlayer.tech/terigon'],
                       blockExplorerUrls: ['https://www.okx.com/explorer/xlayer-testnet'],
                     },
                   ],
@@ -593,8 +593,8 @@ export default function Dashboard() {
       const cIdHex = await provider.request({ method: 'eth_chainId' });
       const currentChainId = parseInt(cIdHex, 16);
       const isLocal = currentChainId === 31337 || currentChainId === 1337;
-      const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech";
-      const activeChainId = isLocal ? currentChainId : 195;
+      const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech/terigon";
+      const activeChainId = isLocal ? currentChainId : 1952;
       const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
 
       const walletClient = createWalletClient({
@@ -1134,8 +1134,8 @@ export default function Dashboard() {
         const cIdHex = await provider.request({ method: 'eth_chainId' });
         const currentChainId = parseInt(cIdHex, 16);
         const isLocal = currentChainId === 31337 || currentChainId === 1337;
-        const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech";
-        const activeChainId = isLocal ? currentChainId : 195;
+        const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech/terigon";
+        const activeChainId = isLocal ? currentChainId : 1952;
         const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
 
         const walletClient = createWalletClient({
