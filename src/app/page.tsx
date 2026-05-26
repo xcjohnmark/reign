@@ -72,7 +72,7 @@ const reignPoolAbi = [
     inputs: [],
     name: "deposit",
     outputs: [],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function"
   },
   {
@@ -120,15 +120,24 @@ export default function Dashboard() {
   const [successMsg, setSuccessMsg] = useState('');
 
   // On-Chain Balances
-  const [balanceUSDT, setBalanceUSDT] = useState<number>(0);
+  const [balanceOKB, setBalanceOKB] = useState<number>(0);
   const [deposited, setDeposited] = useState<boolean>(false);
   const [withdrawableProfit, setWithdrawableProfit] = useState<number>(0);
   const [lockedPrincipal, setLockedPrincipal] = useState<number>(0);
   const [epochEnded, setEpochEnded] = useState<boolean>(false);
 
+  // Variable Lock / OKX Wallet Integration States (Block 2)
+  const [stakeInputAmount, setStakeInputAmount] = useState<string>("0.125");
+  const [walletProvider, setWalletProvider] = useState<'okx' | 'metamask'>('okx');
+  const [isWrongNetwork, setIsWrongNetwork] = useState<boolean>(false);
+  const [chainId, setChainId] = useState<number | null>(null);
+  const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
+
   // Tournament / Simulator State
   const [currentMatchday, setCurrentMatchday] = useState<number>(1);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [leaderboardSortField, setLeaderboardSortField] = useState<'score' | 'locked' | 'pnl'>('score');
+  const [leaderboardSortAsc, setLeaderboardSortAsc] = useState<boolean>(false);
   const [standings, setStandings] = useState<any[]>([]);
   const [activeCountries, setActiveCountries] = useState<string[]>([]);
   const [matchdayHistory, setMatchdayHistory] = useState<any[]>([]);
@@ -158,6 +167,10 @@ export default function Dashboard() {
   useEffect(() => {
     const savedWallet = localStorage.getItem('reign_wallet');
     const savedType = localStorage.getItem('reign_wallet_type');
+    const savedProvider = localStorage.getItem('reign_wallet_provider');
+    if (savedProvider) {
+      setWalletProvider(savedProvider as 'okx' | 'metamask');
+    }
     if (savedWallet && savedType) {
       setWallet(savedWallet);
       setWalletType(savedType as 'mock' | 'real');
@@ -173,6 +186,39 @@ export default function Dashboard() {
     }
   }, [wallet, walletType]);
 
+  // Listen for accountsChanged and chainChanged on real Web3 wallet
+  useEffect(() => {
+    if (walletType === 'real') {
+      const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
+      if (!provider) return;
+
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length > 0) {
+          setWallet(accounts[0].toLowerCase());
+        } else {
+          disconnectWallet();
+        }
+      };
+
+      const handleChainChanged = (cIdHex: string) => {
+        const newChainId = parseInt(cIdHex, 16);
+        setChainId(newChainId);
+        setIsWrongNetwork(newChainId !== 195);
+        loadWeb3State();
+      };
+
+      provider.on('accountsChanged', handleAccountsChanged);
+      provider.on('chainChanged', handleChainChanged);
+
+      return () => {
+        if (provider.removeListener) {
+          provider.removeListener('accountsChanged', handleAccountsChanged);
+          provider.removeListener('chainChanged', handleChainChanged);
+        }
+      };
+    }
+  }, [walletType, walletProvider]);
+
   // Load general simulator state periodically
   useEffect(() => {
     loadSimulatorState();
@@ -187,7 +233,7 @@ export default function Dashboard() {
         const res = await fetch(`/api/web3?wallet=${wallet}`);
         const data = await res.json();
         if (data.onChainState) {
-          setBalanceUSDT(data.onChainState.usdtBalance);
+          setBalanceOKB(data.onChainState.okbBalance);
           setDeposited(data.onChainState.deposited);
           setWithdrawableProfit(data.onChainState.withdrawableProfit);
           setLockedPrincipal(data.onChainState.lockedPrincipal);
@@ -198,20 +244,35 @@ export default function Dashboard() {
     } else {
       // Real Web3 Mode
       try {
-        const { createPublicClient, http } = await import('viem');
-        const publicClient = createPublicClient({
-          transport: http("http://127.0.0.1:8545") // localhost Node
-        });
+        const { createPublicClient, http, formatEther } = await import('viem');
         
-        const formatDec = (val: bigint) => Number(val) / 1e18;
+        const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
+        if (!provider) return;
 
-        const balanceVal = await publicClient.readContract({
-          address: USDT_ADDRESS as `0x${string}`,
-          abi: mockUsdtAbi,
-          functionName: 'balanceOf',
-          args: [wallet as `0x${string}`]
-        }) as bigint;
+        // Check chain ID
+        const cIdHex = await provider.request({ method: 'eth_chainId' });
+        const currentChainId = parseInt(cIdHex, 16);
+        setChainId(currentChainId);
+        setIsWrongNetwork(currentChainId !== 195);
 
+        const publicClient = createPublicClient({
+          chain: {
+            id: 195,
+            name: "X Layer Testnet",
+            nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
+            rpcUrls: { default: { http: ["https://testrpc.xlayer.tech"] } }
+          },
+          transport: http("https://testrpc.xlayer.tech")
+        });
+
+        // 1. Fetch native balance of OKB
+        const rawBalance = await provider.request({
+          method: 'eth_getBalance',
+          params: [wallet, 'latest']
+        });
+        const balanceVal = BigInt(rawBalance);
+
+        // 2. Fetch ReignPool user deposits
         const depVal = await publicClient.readContract({
           address: POOL_ADDRESS as `0x${string}`,
           abi: reignPoolAbi,
@@ -219,6 +280,7 @@ export default function Dashboard() {
           args: [wallet as `0x${string}`]
         }) as bigint;
 
+        // 3. Fetch ReignPool withdrawableProfit
         const profitVal = await publicClient.readContract({
           address: POOL_ADDRESS as `0x${string}`,
           abi: reignPoolAbi,
@@ -226,19 +288,58 @@ export default function Dashboard() {
           args: [wallet as `0x${string}`]
         }) as bigint;
 
+        // 4. Fetch epochEnded
         const endVal = await publicClient.readContract({
           address: POOL_ADDRESS as `0x${string}`,
           abi: reignPoolAbi,
           functionName: 'epochEnded'
         }) as boolean;
 
-        setBalanceUSDT(formatDec(balanceVal));
+        setBalanceOKB(parseFloat(formatEther(balanceVal)));
         setDeposited(depVal > 0n);
-        setLockedPrincipal(formatDec(depVal));
-        setWithdrawableProfit(formatDec(profitVal));
+        setLockedPrincipal(parseFloat(formatEther(depVal)));
+        setWithdrawableProfit(parseFloat(formatEther(profitVal)));
         setEpochEnded(endVal);
       } catch (err) {
         console.warn("Real Web3 contracts check failed, make sure local Hardhat node is running", err);
+      }
+    }
+  };
+
+  const switchNetwork = async () => {
+    const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
+    if (!provider) return;
+    try {
+      await provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0xC3' }], // 195 in hex
+      });
+      setIsWrongNetwork(false);
+    } catch (switchError: any) {
+      if (switchError.code === 4902) {
+        try {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: '0xC3',
+                chainName: 'X Layer Testnet',
+                nativeCurrency: {
+                  name: 'OKB',
+                  symbol: 'OKB',
+                  decimals: 18,
+                },
+                rpcUrls: ['https://testrpc.xlayer.tech'],
+                blockExplorerUrls: ['https://www.okx.com/explorer/xlayer-testnet'],
+              },
+            ],
+          });
+          setIsWrongNetwork(false);
+        } catch (addError) {
+          console.error("Failed to add X Layer Testnet", addError);
+        }
+      } else {
+        console.error("Failed to switch to X Layer Testnet", switchError);
       }
     }
   };
@@ -292,22 +393,80 @@ export default function Dashboard() {
     setErrorMsg('');
   };
 
-  // Connect MetaMask/OKX Wallet
-  const connectRealWallet = async () => {
-    if (typeof window === 'undefined' || !(window as any).ethereum) {
-      setErrorMsg("No EVM wallet detected. Please install OKX Wallet or MetaMask.");
+  const connectRealWallet = async (providerType: 'okx' | 'metamask') => {
+    setWalletProvider(providerType);
+    let provider = providerType === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
+    
+    if (providerType === 'okx' && !provider) {
+      if ((window as any).ethereum?.isOkxWallet) {
+        provider = (window as any).ethereum;
+      } else {
+        setErrorMsg("OKX Wallet is not installed. Please install it or use MetaMask.");
+        return;
+      }
+    }
+
+    if (!provider) {
+      setErrorMsg(`${providerType === 'okx' ? 'OKX Wallet' : 'MetaMask'} is not detected.`);
       return;
     }
+
     try {
-      const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
       if (accounts.length > 0) {
         const addr = accounts[0].toLowerCase();
         setWallet(addr);
         setWalletType('real');
         localStorage.setItem('reign_wallet', addr);
         localStorage.setItem('reign_wallet_type', 'real');
+        localStorage.setItem('reign_wallet_provider', providerType);
+        
+        // Check chain and switch if needed
+        const cIdHex = await provider.request({ method: 'eth_chainId' });
+        const currentChainId = parseInt(cIdHex, 16);
+        setChainId(currentChainId);
+        if (currentChainId !== 195) {
+          setIsWrongNetwork(true);
+          try {
+            await provider.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0xC3' }], // 195 in hex
+            });
+            setIsWrongNetwork(false);
+          } catch (switchError: any) {
+            if (switchError.code === 4902) {
+              try {
+                await provider.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [
+                    {
+                      chainId: '0xC3',
+                      chainName: 'X Layer Testnet',
+                      nativeCurrency: {
+                        name: 'OKB',
+                        symbol: 'OKB',
+                        decimals: 18,
+                      },
+                      rpcUrls: ['https://testrpc.xlayer.tech'],
+                      blockExplorerUrls: ['https://www.okx.com/explorer/xlayer-testnet'],
+                    },
+                  ],
+                });
+                setIsWrongNetwork(false);
+              } catch (addError) {
+                console.error("Failed to add X Layer Testnet", addError);
+              }
+            } else {
+              console.error("Failed to switch to X Layer Testnet", switchError);
+            }
+          }
+        } else {
+          setIsWrongNetwork(false);
+        }
+        
         setSuccessMsg("Connected to wallet: " + addr.substring(0, 6) + "..." + addr.substring(38));
         setErrorMsg('');
+        setShowConnectModal(false);
       }
     } catch (err: any) {
       setErrorMsg("Wallet connection failed: " + err.message);
@@ -338,7 +497,7 @@ export default function Dashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setBalanceUSDT(data.onChainState.usdtBalance);
+      setBalanceOKB(data.onChainState.okbBalance);
       setDeposited(data.onChainState.deposited);
       setWithdrawableProfit(data.onChainState.withdrawableProfit);
       setLockedPrincipal(data.onChainState.lockedPrincipal);
@@ -358,52 +517,32 @@ export default function Dashboard() {
     setSuccessMsg('');
     try {
       const { createWalletClient, custom, parseUnits } = await import('viem');
+      
+      const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
+      if (!provider) throw new Error("No wallet provider detected");
+      
       const walletClient = createWalletClient({
         chain: {
-          id: 31337, // Localhost Node
-          name: "Localhost",
-          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-          rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } }
+          id: 195,
+          name: "X Layer Testnet",
+          nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
+          rpcUrls: { default: { http: ["https://testrpc.xlayer.tech"] } }
         },
-        transport: custom((window as any).ethereum)
+        transport: custom(provider)
       });
 
-      if (action === "faucet") {
-        // Call Faucet function on USDT contract
-        const faucetAmount = parseUnits("100", 18);
-        const hash = await walletClient.writeContract({
-          address: USDT_ADDRESS as `0x${string}`,
-          abi: mockUsdtAbi,
-          functionName: 'faucet',
-          args: [wallet as `0x${string}`, faucetAmount],
-          account: wallet as `0x${string}`
-        });
-        setSuccessMsg(`Faucet transaction sent! Hash: ${hash}`);
-      } else if (action === "deposit") {
-        // 1. Approve 10 USDT
-        const approveAmount = parseUnits("10", 18);
-        const appHash = await walletClient.writeContract({
-          address: USDT_ADDRESS as `0x${string}`,
-          abi: mockUsdtAbi,
-          functionName: 'approve',
-          args: [POOL_ADDRESS as `0x${string}`, approveAmount],
-          account: wallet as `0x${string}`
-        });
-        
-        setSuccessMsg(`Approval sent! Processing deposit...`);
-        // Wait briefly for block confirmation in localhost
-        await new Promise(r => setTimeout(r, 2000));
-
-        // 2. Deposit
+      if (action === "deposit") {
+        const valToDeposit = amountVal || parseFloat(stakeInputAmount) || 0.125;
         const depHash = await walletClient.writeContract({
           address: POOL_ADDRESS as `0x${string}`,
           abi: reignPoolAbi,
           functionName: 'deposit',
-          account: wallet as `0x${string}`
+          account: wallet as `0x${string}`,
+          value: parseUnits(valToDeposit.toFixed(4), 18)
         });
-        setSuccessMsg(`Deposit successful! Hash: ${depHash}`);
+        setSuccessMsg(`Deposit transaction sent! Hash: ${depHash}`);
       } else if (action === "withdrawProfit") {
-        const withdrawAmount = parseUnits((amountVal || 5.0).toString(), 18);
+        const withdrawAmount = parseUnits((amountVal || 0.0625).toString(), 18);
         const hash = await walletClient.writeContract({
           address: POOL_ADDRESS as `0x${string}`,
           abi: reignPoolAbi,
@@ -479,6 +618,57 @@ export default function Dashboard() {
     isCaptainValid && 
     isViceCaptainValid &&
     deposited;
+
+  // Computed variables for variable lock staking (Block 2)
+  const numericStakeAmount = parseFloat(stakeInputAmount) || 0;
+  
+  // Calculate total locked by competitors
+  const totalCompetitorsLocked = leaderboard
+    .filter(u => u.wallet.toLowerCase() !== wallet.toLowerCase())
+    .reduce((sum, u) => sum + (u.lockedCapital || 0), 0);
+  
+  // User estimated locked principal (80% of entered stake)
+  const userEstPrincipal = numericStakeAmount * 0.8;
+  
+  // Estimated pool share percentage: userEstPrincipal / (totalCompetitorsLocked + userEstPrincipal)
+  const totalEstLocked = totalCompetitorsLocked + userEstPrincipal;
+  const estPoolShare = totalEstLocked > 0 ? (userEstPrincipal / totalEstLocked) * 100 : 0;
+
+  // Validation message helper for staking input
+  let validationMsg = "";
+  if (!wallet) {
+    validationMsg = "Wallet not connected.";
+  } else if (isWrongNetwork && walletType === 'real') {
+    validationMsg = "Incorrect network. Please switch to X Layer Testnet.";
+  } else if (deposited) {
+    validationMsg = "Stake has already been locked.";
+  } else if (numericStakeAmount < 0.125) {
+    validationMsg = "Minimum lock is 0.125 OKB.";
+  } else if (balanceOKB < numericStakeAmount) {
+    validationMsg = "Insufficient OKB balance.";
+  }
+
+  // Sorted Leaderboard according to selected column header (Block 5)
+  const sortedLeaderboard = [...leaderboard].sort((a, b) => {
+    let valA: any = 0;
+    let valB: any = 0;
+    if (leaderboardSortField === 'score') {
+      valA = a.totalScore;
+      valB = b.totalScore;
+    } else if (leaderboardSortField === 'locked') {
+      valA = a.lockedCapital;
+      valB = b.lockedCapital;
+    } else if (leaderboardSortField === 'pnl') {
+      valA = a.totalNetProfit;
+      valB = b.totalNetProfit;
+    }
+
+    if (valA === valB) {
+      // Secondary sort: locked amount descending
+      return b.lockedCapital - a.lockedCapital;
+    }
+    return leaderboardSortAsc ? valA - valB : valB - valA;
+  });
 
   // Add player to current selected slot
   const handleSelectPlayer = (player: Player) => {
@@ -727,7 +917,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-3 bg-neutral-900/60 backdrop-blur border border-neutral-800/80 rounded-full py-1 pl-4 pr-1">
               <div className="text-right">
                 <p className="text-[10px] font-bold text-neutral-500 tracking-wider">BALANCE</p>
-                <p className="text-xs font-black text-neutral-200">${balanceUSDT.toFixed(2)} USDT</p>
+                <p className="text-xs font-black text-[#00ff55] font-mono">{balanceOKB.toFixed(4)} OKB</p>
               </div>
               <div className="bg-neutral-950 px-3 py-1.5 rounded-full border border-neutral-800 flex items-center gap-2">
                 <Wallet className="w-3.5 h-3.5 text-[#00ff55]" />
@@ -747,13 +937,13 @@ export default function Dashboard() {
             <div className="flex gap-2">
               <button 
                 onClick={connectMockWallet} 
-                className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 transition px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 text-neutral-300"
+                className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 transition px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 text-neutral-300"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-neutral-400" />
                 Mock Sign-In
               </button>
               <button 
-                onClick={connectRealWallet} 
+                onClick={() => setShowConnectModal(true)} 
                 className="bg-[#00ff55] hover:bg-[#02e04c] text-black font-extrabold transition px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20"
               >
                 <Wallet className="w-3.5 h-3.5" />
@@ -788,6 +978,27 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Wrong Network Banner */}
+        {isWrongNetwork && walletType === 'real' && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-bold text-amber-500">Wrong Network</h4>
+                <p className="text-xs text-amber-400/95 mt-0.5 leading-relaxed">
+                  Please switch your wallet network to X Layer Testnet to interact with the tournament.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={switchNetwork}
+              className="bg-amber-500 hover:bg-amber-600 text-black text-xs font-black px-4 py-2 rounded-xl transition"
+            >
+              Switch Network
+            </button>
+          </div>
+        )}
+
         {/* Not Connected Screen */}
         {!wallet ? (
           <div className="flex-1 flex items-center justify-center py-20">
@@ -798,13 +1009,13 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-2xl font-black tracking-tight text-neutral-100">Deploy Capital. Build Reign.</h2>
                 <p className="text-neutral-500 text-sm mt-2 leading-relaxed">
-                  Staking HCLP capital ($8 refundable principal + $2 entry fee) unlocks squad compilation and matchday simulations with rewards redistributed via the Z-Score Softmax (NRPS) engine on X Layer.
+                  Staking HCLP capital (80% refundable principal + 20% entry fee) unlocks squad compilation and matchday simulations with rewards redistributed via the Z-Score Softmax (NRPS) engine on X Layer.
                 </p>
               </div>
               
               <div className="flex flex-col gap-2 w-full">
                 <button 
-                  onClick={connectRealWallet} 
+                  onClick={() => setShowConnectModal(true)} 
                   className="w-full bg-[#00ff55] hover:bg-[#02e04c] text-black font-black transition py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
                 >
                   <Wallet className="w-4 h-4" />
@@ -895,18 +1106,73 @@ export default function Dashboard() {
 
                       {/* Staking/Deposit check */}
                       {!deposited ? (
-                        <button 
-                          onClick={() => dispatchAction('deposit')}
-                          disabled={txLoading}
-                          className="bg-gradient-to-r from-[#00ff55] to-emerald-400 hover:from-emerald-400 hover:to-[#00ff55] disabled:opacity-50 text-black font-black px-6 py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10 cursor-pointer self-center"
-                        >
-                          <Coins className="w-4 h-4" />
-                          STAKE $10 USDT ENTRY
-                        </button>
+                        <div className="flex flex-col gap-3 bg-neutral-900/40 p-4 rounded-2xl border border-neutral-800/80 max-w-md w-full sm:w-auto">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">LOCK OKB STAKE</span>
+                            {numericStakeAmount > 0 && (
+                              <span className="text-[10px] font-bold text-neutral-500">
+                                Share: {estPoolShare.toFixed(2)}% | 80% Principal: {userEstPrincipal.toFixed(3)} OKB
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type="number"
+                                step="0.001"
+                                min="0.125"
+                                value={stakeInputAmount}
+                                onChange={(e) => setStakeInputAmount(e.target.value)}
+                                placeholder="Amount"
+                                className="w-full bg-neutral-950 border border-neutral-800 focus:border-[#00ff55]/50 focus:ring-1 focus:ring-[#00ff55]/50 rounded-xl px-3 py-2 text-xs font-mono font-bold text-neutral-100 outline-none transition"
+                              />
+                              <span className="absolute right-3 top-2 text-[10px] font-black text-neutral-500 font-mono">OKB</span>
+                            </div>
+                            <button 
+                              onClick={() => dispatchAction('deposit')}
+                              disabled={txLoading || !!validationMsg}
+                              className="bg-gradient-to-r from-[#00ff55] to-emerald-400 hover:from-emerald-400 hover:to-[#00ff55] disabled:opacity-30 disabled:pointer-events-none text-black font-black px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10 transition"
+                            >
+                              <Coins className="w-3.5 h-3.5" />
+                              STAKE
+                            </button>
+                          </div>
+
+                          {/* Quick Select Buttons */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {[0.125, 0.25, 0.5, 1.0, 2.0, 5.0].map(amt => (
+                              <button
+                                key={amt}
+                                type="button"
+                                onClick={() => setStakeInputAmount(amt.toString())}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition border ${
+                                  parseFloat(stakeInputAmount) === amt
+                                    ? 'bg-[#00ff55]/10 border-[#00ff55] text-[#00ff55]'
+                                    : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700 text-neutral-400 hover:text-neutral-200'
+                                }`}
+                              >
+                                {amt}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Validation Message */}
+                          {validationMsg && (
+                            <p className="text-[10px] font-semibold text-amber-500/90 leading-tight">
+                              ⚠️ {validationMsg}
+                            </p>
+                          )}
+                        </div>
                       ) : (
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 text-[#00ff55] rounded-2xl px-5 py-3 flex items-center gap-2 self-center text-xs font-bold">
-                          <ShieldCheck className="w-4.5 h-4.5" />
-                          Stake Locked & Entry Paid
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 text-[#00ff55] rounded-2xl px-5 py-4 flex flex-col gap-1 self-center text-xs font-bold w-full sm:w-auto">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className="w-4.5 h-4.5 text-[#00ff55]" />
+                            <span>Stake Active & Locked</span>
+                          </div>
+                          <p className="text-[10px] font-normal text-emerald-400/80">
+                            Locked Principal: {lockedPrincipal.toFixed(4)} OKB (refundable)
+                          </p>
                         </div>
                       )}
                     </div>
@@ -1020,7 +1286,7 @@ export default function Dashboard() {
                       <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">Squad Validation</h3>
                       
                       <div className="flex flex-col gap-2 text-xs">
-                        <ValidationCheck label="Deposited & Registered" isValid={deposited} message="STAKE $10 required to save" />
+                        <ValidationCheck label="Deposited & Registered" isValid={deposited} message="STAKE OKB required to save" />
                         <ValidationCheck label="15 Players Drafted" isValid={isSquadSizeValid} message={`${squadSize} / 15 players selected`} />
                         <ValidationCheck label="Under Budget ($100.0M)" isValid={isBudgetValid} message={`Remaining: $${remainingBudget.toFixed(1)}M`} />
                         <ValidationCheck label="Starting Formation Valid" isValid={isFormationValid} message="Conforms to FPL rules (1 GK, 3+ DEF, 1+ FWD)" />
@@ -1233,7 +1499,7 @@ export default function Dashboard() {
                                 <div className="text-center">
                                   <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">NET PAYOUT</p>
                                   <p className={`text-lg font-black mt-1 ${res.netProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
-                                    {res.netProfit >= 0 ? '+' : ''}${res.netProfit.toFixed(2)} USDT
+                                    {res.netProfit >= 0 ? '+' : ''}{res.netProfit.toFixed(4)} OKB
                                   </p>
                                 </div>
                               </div>
@@ -1251,7 +1517,7 @@ export default function Dashboard() {
                             </div>
                             <div className="flex justify-between text-neutral-500">
                               <span>Total Matchday Pool:</span>
-                              <span className="font-bold text-neutral-300">${simulationResult.nrpsResult?.totalPool.toFixed(2)} USDT</span>
+                              <span className="font-mono font-bold text-[#00ff55]">{simulationResult.nrpsResult?.totalPool.toFixed(4)} OKB</span>
                             </div>
                           </div>
                         </div>
@@ -1330,7 +1596,7 @@ export default function Dashboard() {
                             <div className="text-xs text-neutral-500 flex justify-between">
                               <span>Net Payout:</span>
                               <span className={`font-bold ${h.nrpsResult?.userResults.find((r: any) => r.userId === wallet.toLowerCase())?.netProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
-                                ${h.nrpsResult?.userResults.find((r: any) => r.userId === wallet.toLowerCase())?.netProfit.toFixed(2) || '0.00'} USDT
+                                {h.nrpsResult?.userResults.find((r: any) => r.userId === wallet.toLowerCase())?.netProfit.toFixed(4) || '0.0000'} OKB
                               </span>
                             </div>
                           </div>
@@ -1359,32 +1625,33 @@ export default function Dashboard() {
                       <div>
                         <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase mb-4">HCLP Ledger Overview</h3>
                         <div className="flex flex-col gap-3">
-                          <LedgerRow label="Staked Principal (Locked)" val={`$${lockedPrincipal.toFixed(2)} USDT`} desc="Fully refundable after MD 7" />
-                          <LedgerRow label="Withdrawable Profits" val={`$${withdrawableProfit.toFixed(2)} USDT`} desc="Earned via NRPS rankings" />
-                          <LedgerRow label="Wallet USDT Balance" val={`$${balanceUSDT.toFixed(2)} USDT`} desc="Mock standard stablecoin" />
+                          <LedgerRow label="Staked Principal (Locked)" val={`${lockedPrincipal.toFixed(4)} OKB`} desc="Fully refundable after MD 7" />
+                          <LedgerRow label="Withdrawable Profits" val={`${withdrawableProfit.toFixed(4)} OKB`} desc="Earned via NRPS rankings" />
+                          <LedgerRow label="Wallet OKB Balance" val={`${balanceOKB.toFixed(4)} OKB`} desc="Native X Layer gas/utility token" />
                         </div>
                       </div>
 
                       {/* Web3 Faucet & Withdrawal Buttons */}
                       <div className="flex flex-col gap-2 border-t border-neutral-900 pt-5">
-                        {/* Faucet */}
-                        <button 
-                          onClick={() => dispatchAction('faucet')}
-                          disabled={txLoading}
-                          className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 disabled:opacity-50 text-neutral-200 font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition"
+                        {/* Faucet Link */}
+                        <a 
+                          href="https://www.okx.com/explorer/xlayer-testnet"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 text-neutral-200 font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition text-center"
                         >
                           <Download className="w-4.5 h-4.5 text-neutral-400" />
-                          MINT FAUCET $100 USDT
-                        </button>
+                          GET TESTNET OKB (EXTERNAL FAUCET)
+                        </a>
                         
                         {/* Withdraw Profit */}
                         <button 
                           onClick={() => dispatchAction('withdrawProfit')}
-                          disabled={txLoading || withdrawableProfit < 5.0}
+                          disabled={txLoading || withdrawableProfit < 0.0625}
                           className="bg-gradient-to-r from-emerald-500 to-[#00ff55] disabled:opacity-30 disabled:from-neutral-900 disabled:to-neutral-900 disabled:text-neutral-500 disabled:border disabled:border-neutral-850 disabled:cursor-not-allowed text-black font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition shadow-lg shadow-emerald-500/5"
                         >
                           <TrendingUp className="w-4.5 h-4.5" />
-                          WITHDRAW PROFIT (MIN $5)
+                          WITHDRAW PROFIT (MIN 0.0625 OKB)
                         </button>
                         
                         {/* Refund Principal */}
@@ -1394,7 +1661,7 @@ export default function Dashboard() {
                           className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-850 hover:border-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed text-neutral-200 font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition"
                         >
                           <RotateCcw className="w-4.5 h-4.5 text-neutral-400" />
-                          WITHDRAW LOCKED PRINCIPAL ($8)
+                          WITHDRAW PRINCIPAL ({lockedPrincipal.toFixed(4)} OKB)
                         </button>
                       </div>
 
@@ -1402,7 +1669,7 @@ export default function Dashboard() {
                       <div className="bg-neutral-900/30 rounded-2xl p-4 flex gap-3 text-[10px] text-neutral-500 leading-relaxed">
                         <Info className="w-4.5 h-4.5 text-neutral-500 flex-shrink-0 mt-0.5" />
                         <p>
-                          The **Hybrid Capital Lock + Profit (HCLP)** ensures your $8 principal is safe and returned fully upon tournament completion. Only the $2 entry fee goes into matchday prize pools. Profits are claimable once they exceed the minimum limit ($5).
+                          The **Hybrid Capital Lock + Profit (HCLP)** ensures your staked principal (80% of deposit) is safe and returned fully upon tournament completion. Only the non-refundable entry fee (20% of deposit) goes into matchday prize pools. Profits are claimable once they exceed the minimum limit (0.0625 OKB).
                         </p>
                       </div>
 
@@ -1421,22 +1688,62 @@ export default function Dashboard() {
                               <th className="px-4 py-3">Rank</th>
                               <th className="px-4 py-3">Competitor</th>
                               <th className="px-4 py-3">Wallet</th>
-                              <th className="px-4 py-3 text-center">Locked Stake</th>
-                              <th className="px-4 py-3 text-center">Total Score</th>
-                              <th className="px-4 py-3 text-center">Net Profit</th>
+                              <th 
+                                onClick={() => {
+                                  if (leaderboardSortField === 'locked') {
+                                    setLeaderboardSortAsc(!leaderboardSortAsc);
+                                  } else {
+                                    setLeaderboardSortField('locked');
+                                    setLeaderboardSortAsc(false);
+                                  }
+                                }}
+                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none"
+                              >
+                                Locked Stake {leaderboardSortField === 'locked' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                              </th>
+                              <th 
+                                onClick={() => {
+                                  if (leaderboardSortField === 'score') {
+                                    setLeaderboardSortAsc(!leaderboardSortAsc);
+                                  } else {
+                                    setLeaderboardSortField('score');
+                                    setLeaderboardSortAsc(false);
+                                  }
+                                }}
+                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none"
+                              >
+                                Total Score {leaderboardSortField === 'score' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                              </th>
+                              <th 
+                                onClick={() => {
+                                  if (leaderboardSortField === 'pnl') {
+                                    setLeaderboardSortAsc(!leaderboardSortAsc);
+                                  } else {
+                                    setLeaderboardSortField('pnl');
+                                    setLeaderboardSortAsc(false);
+                                  }
+                                }}
+                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none"
+                              >
+                                Net Profit {leaderboardSortField === 'pnl' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                              </th>
                               <th className="px-4 py-3 text-center">Status</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {leaderboard.map((item, idx) => {
+                            {sortedLeaderboard.map((item, idx) => {
                               const isMe = item.wallet === wallet.toLowerCase();
+                              // Find actual rank based on sorted by totalScore
+                              const originalRank = [...leaderboard]
+                                .sort((a, b) => b.totalScore - a.totalScore)
+                                .findIndex(u => u.wallet === item.wallet) + 1;
                               return (
                                 <tr 
                                   key={item.wallet} 
-                                  className={`border-b border-neutral-900/60 hover:bg-neutral-900/10 ${isMe ? 'bg-emerald-500/5 hover:bg-emerald-500/10' : ''}`}
+                                  className={`border-b border-neutral-900/60 hover:bg-neutral-900/10 ${isMe ? 'bg-[#00ff55]/5 hover:bg-[#00ff55]/10 border-l-2 border-l-[#00ff55]' : ''}`}
                                 >
                                   <td className="px-4 py-3 font-mono font-bold">
-                                    {idx + 1 === 1 ? '🥇' : idx + 1 === 2 ? '🥈' : idx + 1 === 3 ? '🥉' : idx + 1}
+                                    {originalRank === 1 ? '🥇' : originalRank === 2 ? '🥈' : originalRank === 3 ? '🥉' : originalRank}
                                   </td>
                                   <td className={`px-4 py-3 font-bold ${isMe ? 'text-[#00ff55]' : 'text-neutral-200'}`}>
                                     {item.name} {isMe ? '(You)' : ''}
@@ -1444,15 +1751,15 @@ export default function Dashboard() {
                                   <td className="px-4 py-3 font-mono text-neutral-500">
                                     {item.wallet.substring(0, 6)}...{item.wallet.substring(36)}
                                   </td>
-                                  <td className="px-4 py-3 text-center font-bold text-neutral-300">
-                                    ${(item.lockedCapital !== undefined ? item.lockedCapital : 8.0).toFixed(2)} USDT
+                                  <td className="px-4 py-3 text-center font-mono font-bold text-neutral-300">
+                                    {(item.lockedCapital !== undefined ? item.lockedCapital : 0.8).toFixed(4)} OKB
                                   </td>
                                   <td className="px-4 py-3 text-center font-bold text-neutral-200">{item.totalScore} pts</td>
-                                  <td className={`px-4 py-3 text-center font-bold ${item.totalNetProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
-                                    {item.totalNetProfit >= 0 ? '+' : ''}${item.totalNetProfit.toFixed(2)} USDT
+                                  <td className={`px-4 py-3 text-center font-mono font-bold ${item.totalNetProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
+                                    {item.totalNetProfit >= 0 ? '+' : ''}{item.totalNetProfit.toFixed(4)} OKB
                                   </td>
                                   <td className="px-4 py-3 text-center">
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${item.hasSquad ? 'bg-emerald-500/10 text-emerald-400' : 'bg-neutral-800 text-neutral-500'}`}>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${item.hasSquad ? 'bg-[#00ff55]/10 text-[#00ff55]' : 'bg-neutral-800 text-neutral-500'}`}>
                                       {item.hasSquad ? 'Locked' : 'No Squad'}
                                     </span>
                                   </td>
@@ -1471,6 +1778,83 @@ export default function Dashboard() {
             </div>
           </>
         )}
+
+      {/* Wallet Connect Modal (Block 1.1) */}
+      {showConnectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-6 max-w-sm w-full flex flex-col gap-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setShowConnectModal(false)}
+              className="absolute right-4 top-4 text-neutral-500 hover:text-neutral-300 transition"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="text-center flex flex-col items-center gap-2">
+              <div className="bg-neutral-900 border border-neutral-800 p-3 rounded-full text-[#00ff55]">
+                <Wallet className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black tracking-tight text-neutral-200">Connect a Wallet</h3>
+              <p className="text-xs text-neutral-500">Select your preferred Web3 wallet. OKX Wallet is recommended on X Layer.</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {/* OKX Wallet */}
+              <button
+                onClick={() => connectRealWallet('okx')}
+                className="flex items-center justify-between bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 transition text-left group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-black p-1.5 rounded-xl border border-neutral-800 text-[#00ff55] font-black text-xs font-mono w-8 h-8 flex items-center justify-center">
+                    OKX
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-neutral-200 group-hover:text-white transition">OKX Wallet</h4>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">Preferred default wallet</p>
+                  </div>
+                </div>
+                {typeof window !== 'undefined' && (window as any).okxwallet && (
+                  <span className="bg-[#00ff55]/10 text-[#00ff55] text-[9px] font-black uppercase px-2 py-0.5 rounded border border-[#00ff55]/30">
+                    Detected
+                  </span>
+                )}
+              </button>
+
+              {/* MetaMask */}
+              <button
+                onClick={() => connectRealWallet('metamask')}
+                className="flex items-center justify-between bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 rounded-2xl p-4 transition text-left group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-black p-1.5 rounded-xl border border-neutral-800 text-amber-500 font-black text-xs font-mono w-8 h-8 flex items-center justify-center">
+                    MM
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-neutral-200 group-hover:text-white transition">MetaMask</h4>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">Standard injected wallet</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Install Help */}
+            {typeof window !== 'undefined' && !(window as any).okxwallet && (
+              <div className="text-center pt-2">
+                <a 
+                  href="https://www.okx.com/web3" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold text-[#00ff55] hover:underline"
+                >
+                  Install OKX Wallet Extension &rarr;
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       </div>
     </div>

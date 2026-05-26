@@ -6,7 +6,7 @@ import { generateValidSquad } from './squadGenerator';
 
 // Types
 export interface MockOnChainState {
-  usdtBalance: number;
+  okbBalance: number;
   deposited: boolean;
   withdrawableProfit: number;
   lockedPrincipal: number;
@@ -94,19 +94,22 @@ export function initializeState(): GameState {
     "HCLP Staker", "World Cup Wiz", "Goal Getter"
   ];
 
+  const possibleDeposits = [0.125, 0.25, 0.5, 1.0, 2.0, 5.0];
   const competitors: UserState[] = competitorNames.map((name, i) => {
     const hex = i.toString(16);
     const wallet = `0x${hex.padStart(40, '0')}`;
+    const depositAmount = possibleDeposits[i % possibleDeposits.length];
+    const lockedPrincipal = depositAmount * 0.8;
     return {
       wallet,
       name,
       squad: null,
       history: [],
       onChainState: {
-        usdtBalance: 90.0, // started with 100, paid 10
+        okbBalance: 100.0 - depositAmount,
         deposited: true,
         withdrawableProfit: 0.0,
-        lockedPrincipal: 8.0
+        lockedPrincipal
       }
     };
   });
@@ -350,15 +353,19 @@ export function simulateMatchday(state: GameState): GameState {
       const scoreResult = calculateTeamScore(u.squad, players, statsMap);
       score = scoreResult.totalScore;
     }
+    const lockedAmount = u.onChainState.lockedPrincipal;
+    const matchdayFee = (u.onChainState.lockedPrincipal * 0.25) / 7.0;
     return {
       userId: u.wallet,
-      score
+      score,
+      lockedAmount,
+      matchdayFee
     };
   });
 
   // 5. Calculate NRPS redistribution
-  const poolSize = state.users.length * 2.0;
-  const nrpsResult = calculateNRPS(userPerformances, poolSize, 1.0, 2.0 / 7.0);
+  const poolSize = state.users.reduce((sum, u) => sum + u.onChainState.lockedPrincipal * 0.25, 0);
+  const nrpsResult = calculateNRPS(userPerformances, poolSize, 1.0);
 
   // Update histories and withdrawableProfit of users
   for (const u of state.users) {
@@ -455,7 +462,7 @@ export function getOrCreateMockUser(walletAddress: string): UserState {
       squad: null,
       history: [],
       onChainState: {
-        usdtBalance: 0.0,
+        okbBalance: 100.0, // Start with 100 OKB mock balance
         deposited: false,
         withdrawableProfit: 0.0,
         lockedPrincipal: 0.0
@@ -474,7 +481,7 @@ export function executeMockAction(walletAddress: string, action: string, amount?
     name: "User",
     squad: null,
     history: [],
-    onChainState: { usdtBalance: 0.0, deposited: false, withdrawableProfit: 0.0, lockedPrincipal: 0.0 }
+    onChainState: { okbBalance: 100.0, deposited: false, withdrawableProfit: 0.0, lockedPrincipal: 0.0 }
   };
 
   // If user wasn't in state, push it
@@ -483,27 +490,31 @@ export function executeMockAction(walletAddress: string, action: string, amount?
   }
 
   if (action === "faucet") {
-    user.onChainState.usdtBalance += 100.0;
+    user.onChainState.okbBalance += 100.0;
   } else if (action === "deposit") {
-    if (user.onChainState.usdtBalance < 10.0) {
-      throw new Error("Insufficient USDT balance. Use Faucet first.");
+    const depositAmount = amount || 10.0;
+    if (user.onChainState.okbBalance < depositAmount) {
+      throw new Error(`Insufficient OKB balance. Need ${depositAmount} OKB.`);
+    }
+    if (depositAmount < 0.125) {
+      throw new Error("Minimum deposit is 0.125 OKB ($10 equivalent).");
     }
     if (user.onChainState.deposited) {
       throw new Error("Already deposited.");
     }
-    user.onChainState.usdtBalance -= 10.0;
+    user.onChainState.okbBalance -= depositAmount;
     user.onChainState.deposited = true;
-    user.onChainState.lockedPrincipal = 8.0;
+    user.onChainState.lockedPrincipal = depositAmount * 0.8;
   } else if (action === "withdrawProfit") {
     const withdrawAmount = amount || 0;
-    if (withdrawAmount < 5.0) {
-      throw new Error("Below minimum withdrawal limit ($5)");
+    if (withdrawAmount < 0.0625) {
+      throw new Error("Below minimum withdrawal limit (0.0625 OKB)");
     }
     if (user.onChainState.withdrawableProfit < withdrawAmount) {
       throw new Error("Insufficient withdrawable profit balance");
     }
     user.onChainState.withdrawableProfit -= withdrawAmount;
-    user.onChainState.usdtBalance += withdrawAmount;
+    user.onChainState.okbBalance += withdrawAmount;
   } else if (action === "withdrawPrincipal") {
     if (!state.epochEnded) {
       throw new Error("Epoch has not ended yet");
@@ -511,7 +522,7 @@ export function executeMockAction(walletAddress: string, action: string, amount?
     if (user.onChainState.lockedPrincipal <= 0) {
       throw new Error("No principal to withdraw");
     }
-    user.onChainState.usdtBalance += user.onChainState.lockedPrincipal;
+    user.onChainState.okbBalance += user.onChainState.lockedPrincipal;
     user.onChainState.lockedPrincipal = 0.0;
   } else {
     throw new Error("Unknown mock action: " + action);

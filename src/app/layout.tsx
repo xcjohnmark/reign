@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "REIGN — Web3 Fantasy World Cup on X Layer",
-  description: "Experience the 2026 World Cup in a gamified Web3 fantasy league. Stake USDT, build your 15-player squad under a $100M budget, simulate matchdays, and earn payouts via the Normalized Relative Performance System (NRPS) on OKX's X Layer L2 network.",
+  description: "Experience the 2026 World Cup in a gamified Web3 fantasy league. Stake OKB, build your 15-player squad under a $100M budget, simulate matchdays, and earn payouts via the Normalized Relative Performance System (NRPS) on OKX's X Layer L2 network.",
 };
 
 export default function RootLayout({

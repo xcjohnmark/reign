@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 contract ReignPool {
     // State variables
-    IERC20 public immutable depositToken;
     address public owner;
     bool public epochEnded;
     uint256 public totalDeposits; // Tracks total locked principal
@@ -15,9 +12,8 @@ contract ReignPool {
     mapping(address => uint256) public withdrawableProfit; // User address => accumulated profit
 
     // Constants (using 18 decimals)
-    uint256 public constant ENTRY_FEE = 2 * 10**18;        // $2
-    uint256 public constant LOCKED_PRINCIPAL = 8 * 10**18; // $8
-    uint256 public constant MIN_WITHDRAWAL_LIMIT = 5 * 10**18; // $5
+    uint256 public constant MIN_DEPOSIT_LIMIT = 125 * 10**15; // 0.125 OKB
+    uint256 public constant MIN_WITHDRAWAL_LIMIT = 625 * 10**14; // 0.0625 OKB ($5 equivalent)
 
     // Events
     event Deposited(address indexed user, uint256 principal, uint256 fee);
@@ -27,9 +23,7 @@ contract ReignPool {
     event EpochEnded();
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
 
-    constructor(address _depositToken) {
-        require(_depositToken != address(0), "Invalid token address");
-        depositToken = IERC20(_depositToken);
+    constructor() {
         owner = msg.sender;
     }
 
@@ -39,24 +33,20 @@ contract ReignPool {
     }
 
     /**
-     * @notice Allows a user to deposit $10 ($2 non-refundable entry fee + $8 refundable principal)
+     * @notice Allows a user to deposit native OKB (20% non-refundable entry fee + 80% refundable principal)
      */
-    function deposit() external {
+    function deposit() external payable {
         require(userDeposits[msg.sender] == 0, "User already registered");
         require(!epochEnded, "Epoch already ended");
+        require(msg.value >= MIN_DEPOSIT_LIMIT, "Below minimum deposit limit");
 
-        uint256 totalRequired = ENTRY_FEE + LOCKED_PRINCIPAL;
+        uint256 fee = (msg.value * 20) / 100;
+        uint256 principal = msg.value - fee;
 
-        // Transfer $10 from user to contract
-        require(
-            depositToken.transferFrom(msg.sender, address(this), totalRequired),
-            "Token transfer failed"
-        );
+        userDeposits[msg.sender] = principal;
+        totalDeposits += principal;
 
-        userDeposits[msg.sender] = LOCKED_PRINCIPAL;
-        totalDeposits += LOCKED_PRINCIPAL;
-
-        emit Deposited(msg.sender, LOCKED_PRINCIPAL, ENTRY_FEE);
+        emit Deposited(msg.sender, principal, fee);
     }
 
     /**
@@ -99,13 +89,14 @@ contract ReignPool {
 
         withdrawableProfit[msg.sender] -= amount;
 
-        require(depositToken.transfer(msg.sender, amount), "Token transfer failed");
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed");
 
         emit ProfitWithdrawn(msg.sender, amount);
     }
 
     /**
-     * @notice Allows a user to retrieve their $8 principal once the epoch (tournament) has ended
+     * @notice Allows a user to retrieve their principal once the epoch (tournament) has ended
      */
     function withdrawPrincipal() external {
         require(epochEnded, "Epoch has not ended");
@@ -115,7 +106,8 @@ contract ReignPool {
         userDeposits[msg.sender] = 0;
         totalDeposits -= principal;
 
-        require(depositToken.transfer(msg.sender, principal), "Token transfer failed");
+        (bool success, ) = payable(msg.sender).call{value: principal}("");
+        require(success, "Transfer failed");
 
         emit PrincipalWithdrawn(msg.sender, principal);
     }

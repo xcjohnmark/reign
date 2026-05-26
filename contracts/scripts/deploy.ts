@@ -9,16 +9,9 @@ async function main() {
 
   console.log("Deploying contracts with the account:", deployer.address);
 
-  // Deploy MockUSDT
-  console.log("Deploying MockUSDT...");
-  const mockUSDT = await ethers.deployContract("MockUSDT");
-  await mockUSDT.waitForDeployment();
-  const mockUSDTAddress = await mockUSDT.getAddress();
-  console.log(`MockUSDT deployed to: ${mockUSDTAddress}`);
-
   // Deploy ReignPool
   console.log("Deploying ReignPool...");
-  const reignPool = await ethers.deployContract("ReignPool", [mockUSDTAddress]);
+  const reignPool = await ethers.deployContract("ReignPool");
   await reignPool.waitForDeployment();
   const reignPoolAddress = await reignPool.getAddress();
   console.log(`ReignPool deployed to: ${reignPoolAddress}`);

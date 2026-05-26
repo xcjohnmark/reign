@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         squad: null,
         history: [],
         onChainState: {
-          usdtBalance: 0.0,
+          okbBalance: 100.0,
           deposited: false,
           withdrawableProfit: 0.0,
           lockedPrincipal: 0.0
