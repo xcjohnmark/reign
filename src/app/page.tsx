@@ -1525,7 +1525,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Market / Selector panel */}
-                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col min-h-[400px] lg:min-h-0 flex-1 overflow-hidden">
+                    <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col min-h-[400px] lg:min-h-[500px] flex-1 overflow-hidden">
                       <div className="flex items-center justify-between mb-4 flex-shrink-0">
                         <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">
                           {selectedSlotIndex ? `SELECT ${getPositionName(selectedSlotIndex.type === 'starter' ? starterPositions[selectedSlotIndex.index] : (selectedSlotIndex.index === 0 ? 'GK' : selectedSlotIndex.index === 1 ? 'DEF' : selectedSlotIndex.index === 2 ? 'MID' : 'FWD'))}` : "PLAYER MARKET"}
