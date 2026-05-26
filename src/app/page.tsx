@@ -103,9 +103,8 @@ const reignPoolAbi = [
   }
 ];
 
-// Contract Addresses (Hardhat localhost defaults)
-const USDT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const POOL_ADDRESS = "0xff6C80813A67Cd3d30a9bF11Ce88F439EC1fe9aC";
+// Contract Addresses (X Layer Testnet)
+const POOL_ADDRESS = "0x013FbBE3c50563645B963e83CeC1ac3576384CaB";
 
 
 export default function Dashboard() {
@@ -217,7 +216,7 @@ export default function Dashboard() {
       const handleChainChanged = (cIdHex: string) => {
         const newChainId = parseInt(cIdHex, 16);
         setChainId(newChainId);
-        setIsWrongNetwork(newChainId !== 1952 && newChainId !== 31337 && newChainId !== 1337);
+        setIsWrongNetwork(newChainId !== 1952);
         loadWeb3State();
       };
 
@@ -322,17 +321,14 @@ export default function Dashboard() {
         const cIdHex = await provider.request({ method: 'eth_chainId' });
         const currentChainId = parseInt(cIdHex, 16);
         setChainId(currentChainId);
-        setIsWrongNetwork(currentChainId !== 1952 && currentChainId !== 31337 && currentChainId !== 1337);
+        setIsWrongNetwork(currentChainId !== 1952);
 
-        const isLocal = currentChainId === 31337 || currentChainId === 1337;
-        const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech/terigon";
-        const activeChainId = isLocal ? currentChainId : 1952;
-        const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
+        const activeRpc = "https://testrpc.xlayer.tech/terigon";
 
         const publicClient = createPublicClient({
           chain: {
-            id: activeChainId,
-            name: activeChainName,
+            id: 1952,
+            name: "X Layer Testnet",
             nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
             rpcUrls: { default: { http: [activeRpc] } }
           },
@@ -351,12 +347,20 @@ export default function Dashboard() {
           console.error("Failed to fetch native OKB balance via provider", balErr);
         }
 
-        // 2. Fetch ReignPool details (wrapped in an isolated try-catch)
+        // 2. Check if contract exists at POOL_ADDRESS (bytecode safety net)
         let depVal = 0n;
         let profitVal = 0n;
         let endVal = false;
 
         try {
+          const code = await publicClient.getBytecode({ address: POOL_ADDRESS as `0x${string}` });
+          if (!code || code === '0x') {
+            console.warn("No contract deployed at POOL_ADDRESS on current network. Skipping contract reads.");
+            setDeposited(false);
+            setLockedPrincipal(0);
+            setWithdrawableProfit(0);
+            return;
+          }
           depVal = await publicClient.readContract({
             address: POOL_ADDRESS as `0x${string}`,
             abi: reignPoolAbi,
@@ -543,7 +547,7 @@ export default function Dashboard() {
         const cIdHex = await provider.request({ method: 'eth_chainId' });
         const currentChainId = parseInt(cIdHex, 16);
         setChainId(currentChainId);
-        if (currentChainId !== 1952 && currentChainId !== 31337 && currentChainId !== 1337) {
+        if (currentChainId !== 1952) {
           setIsWrongNetwork(true);
           setNetworkSwitching(true);
           try {
@@ -645,19 +649,12 @@ export default function Dashboard() {
       const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
       if (!provider) throw new Error("No wallet provider detected");
       
-      const cIdHex = await provider.request({ method: 'eth_chainId' });
-      const currentChainId = parseInt(cIdHex, 16);
-      const isLocal = currentChainId === 31337 || currentChainId === 1337;
-      const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech/terigon";
-      const activeChainId = isLocal ? currentChainId : 1952;
-      const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
-
       const walletClient = createWalletClient({
         chain: {
-          id: activeChainId,
-          name: activeChainName,
+          id: 1952,
+          name: "X Layer Testnet",
           nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
-          rpcUrls: { default: { http: [activeRpc] } }
+          rpcUrls: { default: { http: ["https://testrpc.xlayer.tech/terigon"] } }
         },
         transport: custom(provider)
       });
@@ -1186,19 +1183,12 @@ export default function Dashboard() {
         const provider = walletProvider === 'okx' ? (window as any).okxwallet : (window as any).ethereum;
         if (!provider) throw new Error("No wallet provider detected");
 
-        const cIdHex = await provider.request({ method: 'eth_chainId' });
-        const currentChainId = parseInt(cIdHex, 16);
-        const isLocal = currentChainId === 31337 || currentChainId === 1337;
-        const activeRpc = isLocal ? "http://127.0.0.1:8545" : "https://testrpc.xlayer.tech/terigon";
-        const activeChainId = isLocal ? currentChainId : 1952;
-        const activeChainName = isLocal ? "Localhost" : "X Layer Testnet";
-
         const walletClient = createWalletClient({
           chain: {
-            id: activeChainId,
-            name: activeChainName,
+            id: 1952,
+            name: "X Layer Testnet",
             nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 },
-            rpcUrls: { default: { http: [activeRpc] } }
+            rpcUrls: { default: { http: ["https://testrpc.xlayer.tech/terigon"] } }
           },
           transport: custom(provider)
         });
