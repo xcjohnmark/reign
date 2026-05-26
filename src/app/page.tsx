@@ -140,6 +140,9 @@ export default function Dashboard() {
   const [leaderboardSortAsc, setLeaderboardSortAsc] = useState<boolean>(false);
   const [isMyRowVisible, setIsMyRowVisible] = useState<boolean>(true);
   const myRowRef = useRef<HTMLTableRowElement | null>(null);
+  const [walletConnecting, setWalletConnecting] = useState<boolean>(false);
+  const [networkSwitching, setNetworkSwitching] = useState<boolean>(false);
+  const [txAction, setTxAction] = useState<string | null>(null);
   const [standings, setStandings] = useState<any[]>([]);
   const [activeCountries, setActiveCountries] = useState<string[]>([]);
   const [matchdayHistory, setMatchdayHistory] = useState<any[]>([]);
@@ -449,6 +452,10 @@ export default function Dashboard() {
       return;
     }
 
+    setWalletConnecting(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
     try {
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       if (accounts.length > 0) {
@@ -465,6 +472,7 @@ export default function Dashboard() {
         setChainId(currentChainId);
         if (currentChainId !== 195) {
           setIsWrongNetwork(true);
+          setNetworkSwitching(true);
           try {
             await provider.request({
               method: 'wallet_switchEthereumChain',
@@ -497,6 +505,8 @@ export default function Dashboard() {
             } else {
               console.error("Failed to switch to X Layer Testnet", switchError);
             }
+          } finally {
+            setNetworkSwitching(false);
           }
         } else {
           setIsWrongNetwork(false);
@@ -508,6 +518,8 @@ export default function Dashboard() {
       }
     } catch (err: any) {
       setErrorMsg("Wallet connection failed: " + err.message);
+    } finally {
+      setWalletConnecting(false);
     }
   };
 
@@ -550,6 +562,7 @@ export default function Dashboard() {
   // On-Chain Real Web3 Actions
   const triggerRealAction = async (action: string, amountVal?: number) => {
     if (walletType !== 'real') return;
+    setTxAction(action);
     setTxLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -605,6 +618,7 @@ export default function Dashboard() {
       setErrorMsg("Transaction failed: " + err.message);
     } finally {
       setTxLoading(false);
+      setTxAction(null);
     }
   };
 
@@ -1001,7 +1015,7 @@ export default function Dashboard() {
       setShowValidationModal(true);
       return;
     }
-
+    setTxAction('saveSquad');
     setTxLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -1040,6 +1054,7 @@ export default function Dashboard() {
       setErrorMsg("Failed to save squad: " + err.message);
     } finally {
       setTxLoading(false);
+      setTxAction(null);
     }
   };
 
@@ -1296,15 +1311,41 @@ export default function Dashboard() {
           </div>
         )}
 
-        {successMsg && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-sm font-bold text-emerald-400">Success</h4>
-              <p className="text-xs text-emerald-300/90 mt-0.5 leading-relaxed">{successMsg}</p>
+        {successMsg && (() => {
+          const hashIndex = successMsg.indexOf("Hash: ");
+          if (hashIndex !== -1) {
+            const textPart = successMsg.substring(0, hashIndex);
+            const hashPart = successMsg.substring(hashIndex + 6).trim();
+            return (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-emerald-400">Success</h4>
+                  <p className="text-xs text-emerald-300/90 mt-0.5 leading-relaxed">
+                    {textPart}
+                    <a 
+                      href={`https://www.okx.com/explorer/xlayer-testnet/tx/${hashPart}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-cyan-400 hover:text-cyan-300 underline ml-1 font-mono break-all font-bold"
+                    >
+                      {hashPart.substring(0, 10)}...{hashPart.substring(hashPart.length - 8)}
+                    </a>
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-bold text-emerald-400">Success</h4>
+                <p className="text-xs text-emerald-300/90 mt-0.5 leading-relaxed">{successMsg}</p>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Wrong Network Banner */}
         {isWrongNetwork && walletType === 'real' && (
@@ -1710,13 +1751,22 @@ export default function Dashboard() {
                         disabled={!wallet || !deposited || txLoading}
                         className="w-full bg-[#00ff55] hover:bg-[#02e04c] disabled:opacity-40 disabled:hover:bg-[#00ff55] disabled:cursor-not-allowed text-black font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2 transition duration-200 mt-2 shadow-lg shadow-emerald-500/10 cursor-pointer"
                       >
-                        <ShieldCheck className="w-4.5 h-4.5" />
-                        {txLoading ? "SAVING..." : "LOCK AND SIGN SQUAD"}
+                        {txLoading && txAction === 'saveSquad' ? (
+                          <div className="w-4.5 h-4.5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <ShieldCheck className="w-4.5 h-4.5" />
+                        )}
+                        {txLoading && txAction === 'saveSquad' ? "SAVING..." : "LOCK AND SIGN SQUAD"}
                       </button>
                     </div>
 
                     {/* Market / Selector panel */}
-                    <div className="lg:sticky lg:top-[90px] lg:max-h-[calc(100vh-130px)] flex flex-col flex-1 min-h-0">
+                    <div className={`
+                      ${selectedSlotIndex 
+                        ? 'fixed inset-0 z-50 bg-neutral-950 p-4 md:p-6 flex flex-col h-full' 
+                        : 'hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0'}
+                      lg:relative lg:inset-auto lg:z-0 lg:bg-transparent lg:p-0 lg:flex lg:flex-col lg:flex-1 lg:min-h-0 lg:sticky lg:top-[90px] lg:max-h-[calc(100vh-130px)]
+                    `}>
                       <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col min-h-[400px] lg:min-h-[500px] flex-1 overflow-hidden">
                       <div className="flex items-center justify-between mb-4 flex-shrink-0">
                         <h3 className="text-sm font-black tracking-wider text-neutral-300 uppercase">
@@ -1993,8 +2043,19 @@ export default function Dashboard() {
                                       <td className="px-4 py-3 text-center">{c.goalsFor - c.goalsAgainst}</td>
                                       <td className="px-4 py-3 text-center font-bold text-neutral-200">{c.points}</td>
                                       <td className="px-4 py-3 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-500'}`}>
-                                          {isActive ? 'Active' : 'OUT'}
+                                        <span className="relative group inline-block">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase cursor-help transition-all ${isActive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
+                                            {isActive ? 'Active' : 'OUT'}
+                                          </span>
+                                          {/* Custom Tooltip */}
+                                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 hidden group-hover:block bg-neutral-950 border border-neutral-800 text-[10px] text-neutral-400 p-2.5 rounded-xl shadow-xl z-50 text-center leading-normal pointer-events-none">
+                                            {isActive 
+                                              ? "This country is still competing. Players from this country can score points." 
+                                              : "This country has been eliminated from the tournament. Players from this country will no longer score points."
+                                            }
+                                            {/* Tooltip arrow */}
+                                            <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-950"></span>
+                                          </span>
                                         </span>
                                       </td>
                                     </tr>
@@ -2092,8 +2153,12 @@ export default function Dashboard() {
                           disabled={txLoading || withdrawableProfit < 0.0625}
                           className="bg-gradient-to-r from-emerald-500 to-[#00ff55] disabled:opacity-30 disabled:from-neutral-900 disabled:to-neutral-900 disabled:text-neutral-500 disabled:border disabled:border-neutral-850 disabled:cursor-not-allowed text-black font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition shadow-lg shadow-emerald-500/5"
                         >
-                          <TrendingUp className="w-4.5 h-4.5" />
-                          WITHDRAW PROFIT (MIN 0.0625 OKB)
+                          {txLoading && txAction === 'withdrawProfit' ? (
+                            <div className="w-4.5 h-4.5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <TrendingUp className="w-4.5 h-4.5" />
+                          )}
+                          {txLoading && txAction === 'withdrawProfit' ? "WITHDRAWING..." : "WITHDRAW PROFIT (MIN 0.0625 OKB)"}
                         </button>
                         
                         {/* Refund Principal */}
@@ -2102,8 +2167,12 @@ export default function Dashboard() {
                           disabled={txLoading || !epochEnded || lockedPrincipal <= 0}
                           className="bg-neutral-900 hover:bg-neutral-850 border border-neutral-850 hover:border-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed text-neutral-200 font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 cursor-pointer transition"
                         >
-                          <RotateCcw className="w-4.5 h-4.5 text-neutral-400" />
-                          WITHDRAW PRINCIPAL ({lockedPrincipal.toFixed(4)} OKB)
+                          {txLoading && txAction === 'withdrawPrincipal' ? (
+                            <div className="w-4.5 h-4.5 border-2 border-neutral-200 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <RotateCcw className="w-4.5 h-4.5 text-neutral-400" />
+                          )}
+                          {txLoading && txAction === 'withdrawPrincipal' ? "REFUNDING..." : `WITHDRAW PRINCIPAL (${lockedPrincipal.toFixed(4)} OKB)`}
                         </button>
                       </div>
 
@@ -2248,6 +2317,28 @@ export default function Dashboard() {
           </>
         )}
 
+      {/* Global Loading Spinner Overlay (Block 6.3) */}
+      {(walletConnecting || networkSwitching || (txLoading && txAction === 'deposit') || simulationLoading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-8 max-w-sm w-full flex flex-col items-center justify-center gap-4 text-center shadow-2xl">
+            {/* Spinner */}
+            <div className="w-12 h-12 border-4 border-[#00ff55]/20 border-t-[#00ff55] rounded-full animate-spin"></div>
+            <h4 className="text-sm font-black text-neutral-200 uppercase tracking-wider">
+              {walletConnecting && "Connecting Wallet..."}
+              {networkSwitching && "Switching to X Layer..."}
+              {txLoading && txAction === 'deposit' && "Confirming on X Layer..."}
+              {simulationLoading && `Simulating Matchday ${currentMatchday}...`}
+            </h4>
+            <p className="text-xs text-neutral-500 leading-normal">
+              {walletConnecting && "Please approve the connection request in your wallet extension."}
+              {networkSwitching && "Please confirm the network switch in your wallet extension."}
+              {txLoading && txAction === 'deposit' && "Waiting for block confirmation on X Layer Testnet."}
+              {simulationLoading && "Generating match scores and calculating NRPS payouts."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Wallet Connect Modal (Block 1.1) */}
       {showConnectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -2346,10 +2437,11 @@ export default function Dashboard() {
               <p className="text-xs text-neutral-500">Your squad does not meet all tournament regulations. Please address the errors below.</p>
             </div>
 
+
             <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto pr-1">
               {squadValidationErrors.map((err, idx) => (
                 <div key={idx} className="bg-neutral-900/50 border border-neutral-900 rounded-xl p-3 flex gap-2 text-xs text-neutral-300 leading-normal">
-                  <span className="text-red-500 font-bold flex-shrink-0 mt-0.5">•</span>
+                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                   <span>{err}</span>
                 </div>
               ))}
@@ -2359,7 +2451,7 @@ export default function Dashboard() {
               onClick={() => setShowValidationModal(false)}
               className="w-full bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-200 font-black py-3 rounded-2xl text-xs transition duration-200 mt-2 cursor-pointer"
             >
-              Got it
+              Fix Issues
             </button>
           </div>
         </div>
