@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
       
       const latestHistory = u.history[u.history.length - 1];
       const latestPnL = latestHistory ? latestHistory.netProfit : 0.0;
+      const latestScore = latestHistory ? latestHistory.score : 0;
 
       return {
         wallet: u.wallet,
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
         totalReward,
         totalNetProfit,
         latestPnL,
+        latestScore,
         hasSquad: u.squad !== null,
         lockedCapital: u.onChainState?.lockedPrincipal || 0.0
       };

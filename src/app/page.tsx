@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Coins, Users, Calendar, Play, RotateCcw, AlertTriangle, 
   ShieldCheck, Download, Award, Wallet, ArrowRight, 
@@ -136,8 +136,10 @@ export default function Dashboard() {
   // Tournament / Simulator State
   const [currentMatchday, setCurrentMatchday] = useState<number>(1);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [leaderboardSortField, setLeaderboardSortField] = useState<'score' | 'locked' | 'pnl' | 'totalPnl'>('score');
+  const [leaderboardSortField, setLeaderboardSortField] = useState<'rank' | 'name' | 'locked' | 'latestScore' | 'score' | 'pnl' | 'totalPnl'>('score');
   const [leaderboardSortAsc, setLeaderboardSortAsc] = useState<boolean>(false);
+  const [isMyRowVisible, setIsMyRowVisible] = useState<boolean>(true);
+  const myRowRef = useRef<HTMLTableRowElement | null>(null);
   const [standings, setStandings] = useState<any[]>([]);
   const [activeCountries, setActiveCountries] = useState<string[]>([]);
   const [matchdayHistory, setMatchdayHistory] = useState<any[]>([]);
@@ -698,28 +700,112 @@ export default function Dashboard() {
     validationMsg = "Insufficient OKB balance.";
   }
 
+  // Intersection observer for tracking user row visibility on the leaderboard
+  useEffect(() => {
+    if (!wallet || activeTab !== 'leaderboard') {
+      setIsMyRowVisible(true);
+      return;
+    }
+
+    const element = myRowRef.current;
+    if (!element) {
+      setIsMyRowVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsMyRowVisible(entry.isIntersecting);
+      },
+      {
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(element);
+    return () => {
+      if (element) {
+        observer.unobserve(element);
+      }
+    };
+  }, [wallet, activeTab, leaderboard, leaderboardSortField, leaderboardSortAsc]);
+
+  // Find connected user's rank in leaderboard (by total score)
+  const myRank = (() => {
+    if (!wallet) return 0;
+    const sortedByScore = [...leaderboard].sort((a, b) => b.totalScore - a.totalScore);
+    const idx = sortedByScore.findIndex(u => u.wallet.toLowerCase() === wallet.toLowerCase());
+    return idx !== -1 ? idx + 1 : 0;
+  })();
+
+  const handleSort = (field: 'rank' | 'name' | 'locked' | 'latestScore' | 'score' | 'pnl' | 'totalPnl') => {
+    if (leaderboardSortField === field) {
+      setLeaderboardSortAsc(!leaderboardSortAsc);
+    } else {
+      setLeaderboardSortField(field);
+      if (field === 'name') {
+        setLeaderboardSortAsc(true);
+      } else {
+        setLeaderboardSortAsc(false);
+      }
+    }
+  };
+
+  const formatPnL = (val: number) => {
+    const eps = 1e-9;
+    if (val > eps) return `+${val.toFixed(4)} OKB`;
+    if (val < -eps) return `${val.toFixed(4)} OKB`;
+    return `0.0000 OKB`;
+  };
+
+  const getPnLColorClass = (val: number) => {
+    const eps = 1e-9;
+    if (val > eps) return 'text-[#00ff55]';
+    if (val < -eps) return 'text-red-400';
+    return 'text-neutral-500';
+  };
+
   // Sorted Leaderboard according to selected column header (Block 5)
   const sortedLeaderboard = [...leaderboard].sort((a, b) => {
     let valA: any = 0;
     let valB: any = 0;
+    
     if (leaderboardSortField === 'score') {
       valA = a.totalScore;
       valB = b.totalScore;
     } else if (leaderboardSortField === 'locked') {
-      valA = a.lockedCapital;
-      valB = b.lockedCapital;
+      valA = a.lockedCapital !== undefined ? a.lockedCapital : 0;
+      valB = b.lockedCapital !== undefined ? b.lockedCapital : 0;
     } else if (leaderboardSortField === 'pnl') {
       valA = a.latestPnL !== undefined ? a.latestPnL : 0;
       valB = b.latestPnL !== undefined ? b.latestPnL : 0;
     } else if (leaderboardSortField === 'totalPnl') {
-      valA = a.totalNetProfit;
-      valB = b.totalNetProfit;
+      valA = a.totalNetProfit !== undefined ? a.totalNetProfit : 0;
+      valB = b.totalNetProfit !== undefined ? b.totalNetProfit : 0;
+    } else if (leaderboardSortField === 'latestScore') {
+      valA = a.latestScore !== undefined ? a.latestScore : 0;
+      valB = b.latestScore !== undefined ? b.latestScore : 0;
+    } else if (leaderboardSortField === 'name') {
+      valA = a.name ? a.name.toLowerCase() : '';
+      valB = b.name ? b.name.toLowerCase() : '';
+    } else if (leaderboardSortField === 'rank') {
+      valA = a.totalScore;
+      valB = b.totalScore;
+      if (valA === valB) {
+        return b.lockedCapital - a.lockedCapital;
+      }
+      return leaderboardSortAsc ? valB - valA : valA - valB;
     }
 
     if (valA === valB) {
-      // Secondary sort: locked amount descending
+      // Secondary sort: Amount Locked descending
       return b.lockedCapital - a.lockedCapital;
     }
+
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      return leaderboardSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+
     return leaderboardSortAsc ? valA - valB : valB - valA;
   });
 
@@ -2041,62 +2127,48 @@ export default function Dashboard() {
                         <table className="w-full text-xs text-left text-neutral-400">
                           <thead className="bg-neutral-900 text-[10px] font-bold tracking-wider text-neutral-500 uppercase">
                             <tr>
-                              <th className="px-4 py-3">Rank</th>
-                              <th className="px-4 py-3">Competitor</th>
-                              <th className="px-4 py-3">Wallet</th>
                               <th 
-                                onClick={() => {
-                                  if (leaderboardSortField === 'locked') {
-                                    setLeaderboardSortAsc(!leaderboardSortAsc);
-                                  } else {
-                                    setLeaderboardSortField('locked');
-                                    setLeaderboardSortAsc(false);
-                                  }
-                                }}
-                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none"
+                                onClick={() => handleSort('rank')}
+                                className="px-4 py-3 cursor-pointer hover:text-neutral-200 select-none"
                               >
-                                Locked Stake {leaderboardSortField === 'locked' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                                Rank {leaderboardSortField === 'rank' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
                               </th>
                               <th 
-                                onClick={() => {
-                                  if (leaderboardSortField === 'score') {
-                                    setLeaderboardSortAsc(!leaderboardSortAsc);
-                                  } else {
-                                    setLeaderboardSortField('score');
-                                    setLeaderboardSortAsc(false);
-                                  }
-                                }}
+                                onClick={() => handleSort('name')}
+                                className="px-4 py-3 cursor-pointer hover:text-neutral-200 select-none"
+                              >
+                                Name {leaderboardSortField === 'name' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                              </th>
+                              <th 
+                                onClick={() => handleSort('locked')}
                                 className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none"
+                              >
+                                Amount Locked (OKB) {leaderboardSortField === 'locked' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                              </th>
+                              <th 
+                                onClick={() => handleSort('latestScore')}
+                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none whitespace-nowrap"
+                              >
+                                Current MD Score {leaderboardSortField === 'latestScore' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                              </th>
+                              <th 
+                                onClick={() => handleSort('score')}
+                                className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none whitespace-nowrap"
                               >
                                 Total Score {leaderboardSortField === 'score' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
                               </th>
                               <th 
-                                onClick={() => {
-                                  if (leaderboardSortField === 'pnl') {
-                                    setLeaderboardSortAsc(!leaderboardSortAsc);
-                                  } else {
-                                    setLeaderboardSortField('pnl');
-                                    setLeaderboardSortAsc(false);
-                                  }
-                                }}
+                                onClick={() => handleSort('pnl')}
                                 className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none whitespace-nowrap"
                               >
-                                Matchday PnL {leaderboardSortField === 'pnl' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
+                                MD PnL {leaderboardSortField === 'pnl' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
                               </th>
                               <th 
-                                onClick={() => {
-                                  if (leaderboardSortField === 'totalPnl') {
-                                    setLeaderboardSortAsc(!leaderboardSortAsc);
-                                  } else {
-                                    setLeaderboardSortField('totalPnl');
-                                    setLeaderboardSortAsc(false);
-                                  }
-                                }}
+                                onClick={() => handleSort('totalPnl')}
                                 className="px-4 py-3 text-center cursor-pointer hover:text-neutral-200 select-none whitespace-nowrap"
                               >
                                 Total PnL {leaderboardSortField === 'totalPnl' ? (leaderboardSortAsc ? '▲' : '▼') : ''}
                               </th>
-                              <th className="px-4 py-3 text-center">Status</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2109,31 +2181,43 @@ export default function Dashboard() {
                               return (
                                 <tr 
                                   key={item.wallet} 
-                                  className={`border-b border-neutral-900/60 hover:bg-neutral-900/10 ${isMe ? 'bg-[#00ff55]/5 hover:bg-[#00ff55]/10 border-l-2 border-l-[#00ff55]' : ''}`}
+                                  ref={isMe ? myRowRef : null}
+                                  className={`border-b border-neutral-900/60 hover:bg-neutral-900/10 ${
+                                    isMe 
+                                      ? 'bg-amber-500/5 hover:bg-amber-500/10 border-l-2 border-l-amber-500 shadow-[inset_0_0_12px_rgba(245,158,11,0.05)]' 
+                                      : ''
+                                  }`}
                                 >
                                   <td className="px-4 py-3 font-mono font-bold">
                                     {originalRank === 1 ? '🥇' : originalRank === 2 ? '🥈' : originalRank === 3 ? '🥉' : originalRank}
                                   </td>
-                                  <td className={`px-4 py-3 font-bold ${isMe ? 'text-[#00ff55]' : 'text-neutral-200'}`}>
-                                    {item.name} {isMe ? '(You)' : ''}
-                                  </td>
-                                  <td className="px-4 py-3 font-mono text-neutral-500">
-                                    {item.wallet.substring(0, 6)}...{item.wallet.substring(36)}
+                                  <td className="px-4 py-3">
+                                    <div className="flex flex-col">
+                                      <span className={`font-bold flex items-center gap-1.5 ${isMe ? 'text-amber-400' : 'text-neutral-200'}`}>
+                                        {item.name} {isMe ? '(You)' : ''}
+                                        {item.hasSquad && (
+                                          <span className="w-1.5 h-1.5 rounded-full bg-[#00ff55]" title="Squad Submitted"></span>
+                                        )}
+                                      </span>
+                                      <span className="text-[10px] font-mono text-neutral-500">
+                                        {item.wallet.substring(0, 6)}...{item.wallet.substring(36)}
+                                      </span>
+                                    </div>
                                   </td>
                                   <td className="px-4 py-3 text-center font-mono font-bold text-neutral-300">
-                                    {(item.lockedCapital !== undefined ? item.lockedCapital : 0.8).toFixed(4)} OKB
+                                    {(item.lockedCapital !== undefined ? item.lockedCapital : 0.0).toFixed(4)} OKB
                                   </td>
-                                  <td className="px-4 py-3 text-center font-bold text-neutral-200">{item.totalScore} pts</td>
-                                  <td className={`px-4 py-3 text-center font-mono font-bold whitespace-nowrap ${item.latestPnL >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
-                                    {item.latestPnL >= 0 ? '+' : ''}{item.latestPnL.toFixed(4)} OKB
+                                  <td className="px-4 py-3 text-center font-bold text-neutral-300">
+                                    {item.latestScore !== undefined ? item.latestScore : 0} pts
                                   </td>
-                                  <td className={`px-4 py-3 text-center font-mono font-bold whitespace-nowrap ${item.totalNetProfit >= 0 ? 'text-[#00ff55]' : 'text-red-500'}`}>
-                                    {item.totalNetProfit >= 0 ? '+' : ''}{item.totalNetProfit.toFixed(4)} OKB
+                                  <td className="px-4 py-3 text-center font-bold text-neutral-200">
+                                    {item.totalScore} pts
                                   </td>
-                                  <td className="px-4 py-3 text-center">
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${item.hasSquad ? 'bg-[#00ff55]/10 text-[#00ff55]' : 'bg-neutral-800 text-neutral-500'}`}>
-                                      {item.hasSquad ? 'Locked' : 'No Squad'}
-                                    </span>
+                                  <td className={`px-4 py-3 text-center font-mono font-bold whitespace-nowrap ${getPnLColorClass(item.latestPnL)}`}>
+                                    {formatPnL(item.latestPnL)}
+                                  </td>
+                                  <td className={`px-4 py-3 text-center font-mono font-bold whitespace-nowrap ${getPnLColorClass(item.totalNetProfit)}`}>
+                                    {formatPnL(item.totalNetProfit)}
                                   </td>
                                 </tr>
                               );
@@ -2143,6 +2227,19 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Floating Sticky Badge for Active User's Leaderboard position */}
+                  {!isMyRowVisible && myRank > 0 && activeTab === 'leaderboard' && (
+                    <div 
+                      onClick={() => {
+                        myRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
+                      className="fixed bottom-6 right-6 z-45 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-black px-4 py-2.5 rounded-2xl font-black text-xs tracking-wider uppercase shadow-[0_8px_30px_rgb(245,158,11,0.3)] border border-amber-400/40 hover:from-amber-400 hover:to-yellow-500 active:scale-95 transition-all duration-200 cursor-pointer flex items-center gap-2 group"
+                    >
+                      <Trophy className="w-4 h-4 text-black group-hover:scale-110 transition-transform duration-200" />
+                      <span>Your Position: #{myRank}</span>
+                    </div>
+                  )}
 
                 </div>
               )}
