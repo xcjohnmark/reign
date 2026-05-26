@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Coins, Users, Calendar, Play, RotateCcw, AlertTriangle, 
-  ShieldCheck, Download, Award, Wallet, ArrowRight, 
+  ShieldCheck, Download, Wallet, ArrowRight, 
   CheckCircle, TrendingUp, Info, LogOut, Eye, Trophy 
 } from 'lucide-react';
 import seedData from '../data/seedData.json';
@@ -1322,8 +1322,13 @@ export default function Dashboard() {
       {/* 1. Sleek Header */}
       <header className="border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-tr from-[#00ff55] to-emerald-400 p-2 rounded-lg text-black font-extrabold flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Award className="w-6 h-6" />
+          <div className="bg-gradient-to-tr from-[#00ff55] to-[#bfff00] p-1.5 rounded-lg text-black flex items-center justify-center shadow-lg shadow-emerald-500/20 w-10 h-10">
+            <svg viewBox="0 0 100 100" className="w-6 h-6 fill-current">
+              <polygon points="25,15 46,15 32,85 11,85" />
+              <polygon points="49,15 61,15 54.4,48 42.4,48" />
+              <polygon points="64,15 76,15 69.4,48 57.4,48" />
+              <polygon points="79,15 91,15 84.4,48 72.4,48" />
+            </svg>
           </div>
           <div>
             <h1 className="text-xl font-black tracking-wider bg-gradient-to-r from-neutral-50 via-neutral-100 to-emerald-400 bg-clip-text text-transparent">REIGN</h1>
