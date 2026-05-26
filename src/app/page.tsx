@@ -4,10 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   Coins, Users, Calendar, Play, RotateCcw, AlertTriangle, 
   ShieldCheck, Download, Award, Wallet, ArrowRight, 
-  CheckCircle, TrendingUp, Info, LogOut 
+  CheckCircle, TrendingUp, Info, LogOut, Eye, Trophy 
 } from 'lucide-react';
 import seedData from '../data/seedData.json';
-import { isValidFormation, Player, getFormationPositions } from '../utils/fplScoring';
+import { isValidFormation, Player, getFormationPositions, calculateTeamScore, calculatePlayerPoints, performAutoSubstitutions } from '../utils/fplScoring';
 
 // ABIs for real contract interactions
 const mockUsdtAbi = [
@@ -143,6 +143,8 @@ export default function Dashboard() {
   const [matchdayHistory, setMatchdayHistory] = useState<any[]>([]);
   const [simulationLoading, setSimulationLoading] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [activeResultsMatchday, setActiveResultsMatchday] = useState<number | null>(null);
+  const [userHistory, setUserHistory] = useState<any[]>([]);
 
   // Squad Builder State
   const [starters, setStarters] = useState<(number | null)[]>(Array(11).fill(null)); // 11 slots
@@ -401,7 +403,8 @@ export default function Dashboard() {
 
   const loadSimulatorState = async () => {
     try {
-      const res = await fetch('/api/simulator');
+      const url = wallet ? `/api/simulator?wallet=${wallet.toLowerCase()}` : '/api/simulator';
+      const res = await fetch(url);
       const data = await res.json();
       setCurrentMatchday(data.currentMatchday);
       setEpochEnded(data.epochEnded);
@@ -409,6 +412,7 @@ export default function Dashboard() {
       setStandings(data.standings || []);
       setActiveCountries(data.activeCountries || []);
       setMatchdayHistory(data.matchdayHistory || []);
+      setUserHistory(data.userHistory || []);
     } catch (err) {
       console.error("Failed to load simulator state", err);
     }
@@ -970,6 +974,7 @@ export default function Dashboard() {
 
       setSimulationResult(data);
       setSuccessMsg(`Matchday ${data.simulatedMatchday} simulated successfully!`);
+      setActiveResultsMatchday(data.simulatedMatchday); // Auto-open results modal!
       loadSimulatorState();
       loadWeb3State(); // reload wallet to get new rewards/ledger
     } catch (err: any) {
@@ -1076,6 +1081,55 @@ export default function Dashboard() {
       case 'FWD': return 'Forward';
       default: return '';
     }
+  };
+
+  const getCountryInfo = (id: string) => {
+    const c = seedData.countries.find(x => x.id === id);
+    return {
+      name: c?.name || id,
+      flag: c?.flag || '🏳️'
+    };
+  };
+
+  const getTopPerformers = (selectedHistory: any) => {
+    if (!selectedHistory || !selectedHistory.playerStats) return [];
+    return Object.entries(selectedHistory.playerStats)
+      .map(([idStr, stat]: [string, any]) => {
+        const id = parseInt(idStr);
+        const player = allPlayers.find(p => p.id === id);
+        if (!player) return null;
+        const score = calculatePlayerPoints(player.position, stat);
+        return { player, score, stat };
+      })
+      .filter((p): p is any => p !== null && p.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  };
+
+  const renderPlayerStatsBadges = (player: Player, stats: any) => {
+    if (!stats || stats.minutesPlayed === 0) return <span className="text-neutral-500 font-bold">DNP</span>;
+    const badges = [];
+    if (stats.goals > 0) badges.push(`⚽ x${stats.goals}`);
+    if (stats.assists > 0) badges.push(`👟 x${stats.assists}`);
+    if (player.position === 'GK' && stats.saves > 0) badges.push(`🧤 x${stats.saves}`);
+    if (stats.cleanSheet && stats.minutesPlayed >= 60 && (player.position === 'GK' || player.position === 'DEF' || player.position === 'MID')) {
+      badges.push(`⛔ CS`);
+    }
+    if (stats.bpsBonus > 0) badges.push(`⭐ +${stats.bpsBonus} Bonus`);
+    if (stats.yellowCard) badges.push(`🟨 YC`);
+    if (stats.redCard) badges.push(`🟥 RC`);
+    if (stats.ownGoals > 0) badges.push(`❌ OG`);
+
+    return (
+      <div className="flex flex-wrap gap-1 mt-0.5 justify-center">
+        {badges.map((b, i) => (
+          <span key={i} className="text-[9px] bg-neutral-850 text-neutral-400 px-1 rounded border border-neutral-850 font-bold uppercase whitespace-nowrap">
+            {b}
+          </span>
+        ))}
+        {badges.length === 0 && <span className="text-[10px] text-neutral-500 font-mono">Played {stats.minutesPlayed}m</span>}
+      </div>
+    );
   };
 
   return (
@@ -1253,14 +1307,36 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {/* Reset Control */}
-              <button 
-                onClick={resetTournament} 
-                className="hidden md:flex items-center gap-2 text-xs font-bold text-neutral-500 hover:text-red-400 hover:bg-red-500/10 px-3.5 py-2 rounded-xl transition-all duration-200 border border-transparent hover:border-red-500/20"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Reset Tournament
-              </button>
+              {/* Tournament Phase Badge (Block 4.4) */}
+              <div className="hidden md:flex items-center gap-3">
+                {!epochEnded ? (
+                  <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-850 px-3 py-1.5 rounded-2xl">
+                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">
+                      MD {currentMatchday}
+                    </span>
+                    <div className="h-3 w-px bg-neutral-800" />
+                    <span className="text-[10px] text-blue-400 font-black uppercase tracking-wider">
+                      {currentMatchday <= 3 ? "Group Stage" : 
+                       currentMatchday === 4 ? "Round of 16" : 
+                       currentMatchday === 5 ? "Quarter-Finals" : 
+                       currentMatchday === 6 ? "Semi-Finals" : "Final"}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-[10px] bg-emerald-500/10 text-[#00ff55] border border-emerald-500/20 px-3 py-1.5 rounded-2xl font-black uppercase tracking-wider">
+                    Tournament Completed
+                  </span>
+                )}
+                
+                {/* Reset Control */}
+                <button 
+                  onClick={resetTournament} 
+                  className="flex items-center gap-2 text-xs font-bold text-neutral-500 hover:text-red-400 hover:bg-red-500/10 px-3.5 py-2 rounded-xl transition-all duration-200 border border-transparent hover:border-red-500/20 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reset Tournament
+                </button>
+              </div>
             </div>
 
             {/* 3. Tab Contents */}
@@ -1272,6 +1348,35 @@ export default function Dashboard() {
                   
                   {/* Left Column: Pitch & Bench */}
                   <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+                    
+                    {/* Inter-Matchday Transfer & Withdrawal Window (Block 4.3) */}
+                    {currentMatchday > 1 && !epochEnded && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 text-[#00ff55] rounded-3xl px-5 py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-bold w-full">
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2 w-2 flex-shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00ff55] opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ff55]"></span>
+                          </span>
+                          <span>Matchday {currentMatchday - 1} Complete — Transfer Window Open</span>
+                        </div>
+                        {withdrawableProfit > 0 && (
+                          <div className="flex items-center gap-2.5 self-end sm:self-auto">
+                            {withdrawableProfit < 0.0625 && (
+                              <span className="text-[10px] text-amber-500 font-medium normal-case">
+                                (Min. withdrawal limit is 0.0625 OKB)
+                              </span>
+                            )}
+                            <button
+                              onClick={() => dispatchAction('withdrawProfit')}
+                              disabled={txLoading || withdrawableProfit < 0.0625}
+                              className="bg-[#00ff55] hover:bg-[#02e04c] disabled:opacity-40 disabled:hover:bg-[#00ff55] disabled:cursor-not-allowed text-black font-black px-3.5 py-2 rounded-xl text-[10px] uppercase transition cursor-pointer flex-shrink-0 shadow-lg shadow-emerald-500/10"
+                            >
+                              Withdraw {withdrawableProfit.toFixed(4)} OKB
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     {/* Budget & Registration Indicator */}
                     <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
@@ -1662,9 +1767,24 @@ export default function Dashboard() {
                     {/* Big Action Panel */}
                     <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 shadow-xl">
                       <div>
-                        <h2 className="text-lg font-black tracking-wider text-neutral-200">
-                          {epochEnded ? "TOURNAMENT COMPLETE" : `MATCHDAY ${currentMatchday} SIMULATION`}
-                        </h2>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-lg font-black tracking-wider text-neutral-200 uppercase">
+                            {epochEnded ? "TOURNAMENT COMPLETE" : `MATCHDAY ${currentMatchday} SIMULATION`}
+                          </h2>
+                          {!epochEnded && (
+                            <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                              {currentMatchday <= 3 ? "Group Stage" : 
+                               currentMatchday === 4 ? "Round of 16" : 
+                               currentMatchday === 5 ? "Quarter-Finals" : 
+                               currentMatchday === 6 ? "Semi-Finals" : "Final"}
+                            </span>
+                          )}
+                          {currentMatchday > 1 && !epochEnded && (
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse">
+                              Transfer Window Open
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
                           {epochEnded ? "All 7 matchdays have been simulated and payouts settled. Withdraw your profits and principal from the Ledger tab." : "Simulate games for this matchday, calculate player FPL scores, auto-substitutions, and calculate Softmax payouts."}
                         </p>
@@ -1689,7 +1809,7 @@ export default function Dashboard() {
                                 className="bg-[#00ff55] hover:bg-[#02e04c] disabled:opacity-40 disabled:hover:bg-[#00ff55] disabled:cursor-not-allowed text-black font-black px-6 py-3.5 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer"
                               >
                                 <Play className="w-4.5 h-4.5 fill-black" />
-                                {simulationLoading ? "SIMULATING..." : "SIMULATE MATCHES"}
+                                {simulationLoading ? "SIMULATING..." : `SIMULATE MATCHDAY ${currentMatchday}`}
                               </button>
                               {!isUserSquadValidForSimulation && (
                                 <p className="text-[10px] text-amber-500 font-bold max-w-xs leading-normal">
@@ -1827,6 +1947,14 @@ export default function Dashboard() {
                                 {h.nrpsResult?.userResults.find((r: any) => r.userId === wallet.toLowerCase())?.netProfit.toFixed(4) || '0.0000'} OKB
                               </span>
                             </div>
+
+                            <button
+                              onClick={() => setActiveResultsMatchday(h.matchday)}
+                              className="w-full mt-2 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-neutral-300 font-black py-2 rounded-xl text-[10px] flex items-center justify-center gap-1.5 transition cursor-pointer uppercase"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              View Results
+                            </button>
                           </div>
                         ))}
 
@@ -2169,6 +2297,288 @@ export default function Dashboard() {
               className="w-full bg-[#00ff55] hover:bg-[#02e04c] text-black font-black py-3 rounded-2xl text-xs transition duration-200 mt-2 cursor-pointer shadow-lg shadow-emerald-500/10"
             >
               Draft Replacements
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Matchday Results Modal (Block 4.2) */}
+      {activeResultsMatchday !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-neutral-950 border border-neutral-900 rounded-3xl p-6 max-w-2xl w-full flex flex-col gap-5 shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setActiveResultsMatchday(null)}
+              className="absolute right-4 top-4 text-neutral-500 hover:text-neutral-300 transition cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Modal Header */}
+            <div className="text-center border-b border-neutral-900 pb-4">
+              <h3 className="text-lg font-black tracking-wider text-neutral-200 uppercase">
+                Matchday {activeResultsMatchday} Results
+              </h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Detailed scores, rankings, payouts, and player performances.
+              </p>
+            </div>
+
+            {/* Modal Content Tabs/Grid */}
+            {(() => {
+              const selectedHistory = matchdayHistory.find(h => h.matchday === activeResultsMatchday);
+              if (!selectedHistory) {
+                return (
+                  <div className="py-20 text-center text-xs text-neutral-500 font-bold">
+                    Loading matchday data...
+                  </div>
+                );
+              }
+
+              const userNrpResult = selectedHistory.nrpsResult?.userResults.find((r: any) => r.userId === wallet.toLowerCase());
+              const userRank = selectedHistory.nrpsResult ? 
+                [...selectedHistory.nrpsResult.userResults]
+                  .sort((a, b) => b.score - a.score)
+                  .findIndex((r: any) => r.userId === wallet.toLowerCase()) + 1 : 
+                0;
+
+              const topPerformers = getTopPerformers(selectedHistory);
+
+              const userMdHistory = userHistory.find((h: any) => h.matchday === activeResultsMatchday);
+              const userSquad = userMdHistory?.squad;
+
+              const starterPlayers = userSquad ? userSquad.starters.map((id: number | null) => id ? playerMap.get(id) : null).filter((p: any): p is Player => !!p) : [];
+              const subPlayers = userSquad ? userSquad.subs.map((id: number | null) => id ? playerMap.get(id) : null).filter((p: any): p is Player => !!p) : [];
+              const autoSubResult = userSquad ? performAutoSubstitutions(starterPlayers, subPlayers, selectedHistory.playerStats) : null;
+              const finalStarters = autoSubResult ? autoSubResult.finalStarters : [];
+              const finalStartersSet = new Set(finalStarters.map((p: Player) => p.id));
+
+              const breakdown = userSquad ? calculateTeamScore(userSquad, allPlayers, selectedHistory.playerStats) : null;
+              const finalSubs = userSquad ? userSquad.subs.map((id: number | null) => id ? playerMap.get(id) : null).filter((p: any): p is Player => !!p) : [];
+
+              return (
+                <div className="flex flex-col gap-5 max-h-[70vh] overflow-y-auto pr-1">
+                  {/* 1. User Summary Row */}
+                  <div className="grid grid-cols-3 gap-3 bg-neutral-900/30 border border-neutral-900 p-4 rounded-2xl text-center">
+                    <div>
+                      <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">MD Rank</p>
+                      <p className="text-lg font-black text-neutral-200 mt-0.5">#{userRank || '-'} / 16</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">MD Score</p>
+                      <p className="text-lg font-black text-[#00ff55] mt-0.5">{userNrpResult?.score || 0} pts</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Net Payout</p>
+                      <p className={`text-lg font-black mt-0.5 ${userNrpResult?.netProfit >= 0 ? 'text-[#00ff55]' : 'text-red-400'}`}>
+                        {userNrpResult?.netProfit >= 0 ? '+' : ''}{userNrpResult?.netProfit?.toFixed(4) || '0.0000'} OKB
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 2. Match Scores Grid */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-xs font-black tracking-wider text-neutral-400 uppercase flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                      Match Scores
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {selectedHistory.matches?.map((m: any, idx: number) => {
+                        const teamA = getCountryInfo(m.teamAId);
+                        const teamB = getCountryInfo(m.teamBId);
+                        return (
+                          <div key={idx} className="bg-neutral-900/40 border border-neutral-900 rounded-xl p-3 flex justify-between items-center text-xs">
+                            <div className="flex items-center gap-1.5 w-[42%]">
+                              <span className="text-base flex-shrink-0">{teamA.flag}</span>
+                              <span className="font-bold text-neutral-300 truncate">{teamA.name}</span>
+                            </div>
+                            <div className="flex items-center justify-center gap-2 bg-neutral-950 border border-neutral-850 px-2.5 py-1 rounded-lg font-mono font-black text-neutral-200 text-xs w-[16%]">
+                              <span>{m.scoreA}</span>
+                              <span className="text-neutral-600">-</span>
+                              <span>{m.scoreB}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 w-[42%] justify-end text-right">
+                              <span className="font-bold text-neutral-300 truncate">{teamB.name}</span>
+                              <span className="text-base flex-shrink-0">{teamB.flag}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3. Top Scorers & Newly Eliminated Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Top Scorers */}
+                    <div className="flex flex-col gap-2.5">
+                      <h4 className="text-xs font-black tracking-wider text-neutral-400 uppercase flex items-center gap-1.5">
+                        <Trophy className="w-3.5 h-3.5 text-[#00ff55]" />
+                        Top Performers
+                      </h4>
+                      <div className="flex flex-col gap-2">
+                        {topPerformers.map(({ player, score }: any) => {
+                          const country = getCountryInfo(player.countryId);
+                          return (
+                            <div key={player.id} className="bg-neutral-900/40 border border-neutral-900 rounded-xl p-3 flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">{country.flag}</span>
+                                <div>
+                                  <p className="font-bold text-neutral-200">{player.name}</p>
+                                  <span className="text-[9px] bg-neutral-850 text-neutral-400 px-1 py-0.5 rounded font-black tracking-wider uppercase mt-0.5 inline-block">{player.position}</span>
+                                </div>
+                              </div>
+                              <span className="font-mono font-black text-[#00ff55]">{score} pts</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Eliminated Countries */}
+                    <div className="flex flex-col gap-2.5">
+                      <h4 className="text-xs font-black tracking-wider text-neutral-400 uppercase flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                        Countries Knocked Out
+                      </h4>
+                      <div className="bg-neutral-900/40 border border-neutral-900 rounded-2xl p-4 flex flex-col gap-2 justify-center flex-1">
+                        {selectedHistory.eliminatedCountries && selectedHistory.eliminatedCountries.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {selectedHistory.eliminatedCountries.map((cId: string) => {
+                              const c = getCountryInfo(cId);
+                              return (
+                                <span key={cId} className="flex items-center gap-1.5 bg-neutral-900 border border-neutral-850 text-neutral-300 px-2.5 py-1.5 rounded-xl text-xs font-bold">
+                                  <span>{c.flag}</span>
+                                  <span>{c.name}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-neutral-500 font-bold text-center py-6">
+                            No countries eliminated in this round.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. User's Squad Breakdown */}
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-xs font-black tracking-wider text-neutral-400 uppercase flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-neutral-400" />
+                      User Squad Breakdown
+                    </h4>
+
+                    {breakdown ? (
+                      <div className="border border-neutral-900 rounded-2xl overflow-hidden text-xs">
+                        {/* Table Header */}
+                        <div className="bg-neutral-950 border-b border-neutral-900 p-3 grid grid-cols-12 font-black text-neutral-400 text-[10px] tracking-wider uppercase">
+                          <div className="col-span-6">Player</div>
+                          <div className="col-span-4 text-center">Stats</div>
+                          <div className="col-span-2 text-right">Points</div>
+                        </div>
+
+                        {/* Starters */}
+                        <div className="flex flex-col divide-y divide-neutral-900 bg-neutral-900/10">
+                          {finalStarters.map((player: Player) => {
+                            const country = getCountryInfo(player.countryId);
+                            const stats = selectedHistory.playerStats[player.id];
+                            const pointsInfo = breakdown.playerScores[player.id] || { basePoints: 0, multiplier: 1, finalPoints: 0 };
+                            return (
+                              <div key={player.id} className="p-3 grid grid-cols-12 items-center">
+                                <div className="col-span-6 flex items-center gap-2">
+                                  <span className="text-base flex-shrink-0">{country.flag}</span>
+                                  <div>
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-bold text-neutral-200">{player.name}</span>
+                                      {player.id === breakdown.activeCaptainId && (
+                                        <span className="text-[9px] bg-amber-500/10 text-amber-500 px-1 rounded font-black tracking-wider">C</span>
+                                      )}
+                                    </div>
+                                    <span className="text-[9px] bg-neutral-850 text-neutral-400 px-1 py-0.5 rounded font-black tracking-wider uppercase mt-0.5 inline-block">{player.position}</span>
+                                  </div>
+                                </div>
+                                <div className="col-span-4 flex justify-center">
+                                  {renderPlayerStatsBadges(player, stats)}
+                                </div>
+                                <div className="col-span-2 text-right font-bold text-neutral-200 font-mono">
+                                  {pointsInfo.finalPoints} pts
+                                  {pointsInfo.multiplier === 2 && (
+                                    <span className="text-[9px] text-neutral-500 block">({pointsInfo.basePoints} x 2)</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Substitutions Header */}
+                        {breakdown.substitutionsMade.length > 0 && (
+                          <div className="bg-neutral-950 border-y border-neutral-900 p-2.5 text-[9px] font-black text-amber-500 uppercase tracking-widest text-center">
+                            🔄 Auto-Substitutions Processed
+                          </div>
+                        )}
+
+                        {breakdown.substitutionsMade.map((sub: any, idx: number) => {
+                          const pOut = playerMap.get(sub.out);
+                          const pIn = playerMap.get(sub.in);
+                          return (
+                            <div key={idx} className="bg-neutral-900/30 p-2.5 flex items-center justify-center gap-2 text-[10px] font-bold text-neutral-400 border-b border-neutral-900">
+                              <span>🔴 {pOut?.name} (0 mins)</span>
+                              <span className="text-neutral-600">→</span>
+                              <span className="text-[#00ff55]">🟢 {pIn?.name}</span>
+                            </div>
+                          );
+                        })}
+
+                        {/* Unused Bench */}
+                        {finalSubs.filter((p: Player) => !finalStartersSet.has(p.id)).length > 0 && (
+                          <>
+                            <div className="bg-neutral-950 border-y border-neutral-900 p-2.5 text-[9px] font-black text-neutral-500 uppercase tracking-widest">
+                              Bench (Unused)
+                            </div>
+                            <div className="flex flex-col divide-y divide-neutral-900 bg-neutral-950/20">
+                              {finalSubs.filter((p: Player) => !finalStartersSet.has(p.id)).map((player: Player) => {
+                                const country = getCountryInfo(player.countryId);
+                                const stats = selectedHistory.playerStats[player.id];
+                                return (
+                                  <div key={player.id} className="p-3 grid grid-cols-12 items-center opacity-60">
+                                    <div className="col-span-6 flex items-center gap-2">
+                                      <span className="text-base flex-shrink-0">{country.flag}</span>
+                                      <div>
+                                        <p className="font-bold text-neutral-300">{player.name}</p>
+                                        <span className="text-[9px] bg-neutral-850 text-neutral-400 px-1 py-0.5 rounded font-black tracking-wider uppercase mt-0.5 inline-block">{player.position}</span>
+                                      </div>
+                                    </div>
+                                    <div className="col-span-4 flex justify-center">
+                                      {renderPlayerStatsBadges(player, stats)}
+                                    </div>
+                                    <div className="col-span-2 text-right font-bold text-neutral-400 font-mono">
+                                      {(stats && calculatePlayerPoints(player.position, stats)) || 0} pts
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-neutral-900/20 border border-neutral-900 rounded-2xl p-6 text-center text-xs text-neutral-500 font-bold">
+                        Squad configuration not available for this matchday.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <button
+              onClick={() => setActiveResultsMatchday(null)}
+              className="w-full bg-[#00ff55] hover:bg-[#02e04c] text-black font-black py-3.5 rounded-2xl text-xs transition duration-200 mt-2 cursor-pointer shadow-lg shadow-emerald-500/10"
+            >
+              Continue
             </button>
           </div>
         </div>

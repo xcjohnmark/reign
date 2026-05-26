@@ -21,6 +21,7 @@ export interface UserState {
     score: number;
     reward: number;
     netProfit: number;
+    squad?: Squad;
   }[];
   onChainState: MockOnChainState;
 }
@@ -31,6 +32,8 @@ export interface MatchdayHistory {
   playerStats: Record<number, MatchStats>;
   nrpsResult: NRPSEngineResult | null;
   activeCountries: string[];
+  matches?: { teamAId: string; teamBId: string; scoreA: number; scoreB: number }[];
+  eliminatedCountries?: string[];
 }
 
 export interface CountryStanding {
@@ -309,6 +312,7 @@ export function simulateMatchday(state: GameState): GameState {
   // 2. Simulate Each Match
   const nextActiveCountries: string[] = [];
   const nextLosers: string[] = [];
+  const simulatedMatches: { teamAId: string; teamBId: string; scoreA: number; scoreB: number }[] = [];
 
   for (const [teamAId, teamBId] of pairings) {
     const teamAPlayers = players.filter(p => p.countryId === teamAId);
@@ -342,6 +346,8 @@ export function simulateMatchday(state: GameState): GameState {
       nextActiveCountries.push(teamAId);
       nextActiveCountries.push(teamBId);
     }
+
+    simulatedMatches.push({ teamAId, teamBId, scoreA: goalsA, scoreB: goalsB });
 
     if (md <= 3) {
       const standingA = state.standings.find(s => s.countryId === teamAId)!;
@@ -453,7 +459,8 @@ export function simulateMatchday(state: GameState): GameState {
       matchday: md,
       score: userPerformance.score,
       reward: userPerformance.reward,
-      netProfit: userPerformance.netProfit
+      netProfit: userPerformance.netProfit,
+      squad: u.squad ? JSON.parse(JSON.stringify(u.squad)) : undefined
     });
 
     // Keep mock on-chain state synchronized
@@ -476,7 +483,9 @@ export function simulateMatchday(state: GameState): GameState {
   historyItem.simulated = true;
   historyItem.playerStats = statsMap;
   historyItem.nrpsResult = nrpsResult;
-  historyItem.activeCountries = state.activeCountries;
+  historyItem.activeCountries = [...state.activeCountries];
+  historyItem.matches = simulatedMatches;
+  historyItem.eliminatedCountries = state.activeCountries.filter(c => !activeCountryIds.includes(c));
 
   // Update game state
   state.currentMatchday = md + 1;

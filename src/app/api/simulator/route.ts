@@ -4,6 +4,16 @@ import { readState, writeState, initializeState, simulateMatchday } from "../../
 export async function GET(request: NextRequest) {
   try {
     const state = readState();
+    const { searchParams } = new URL(request.url);
+    const wallet = searchParams.get("wallet");
+
+    let userHistory: any[] = [];
+    if (wallet) {
+      const user = state.users.find(u => u.wallet.toLowerCase() === wallet.toLowerCase());
+      if (user) {
+        userHistory = user.history;
+      }
+    }
 
     // Generate leaderboard
     const leaderboard = state.users.map(u => {
@@ -35,7 +45,8 @@ export async function GET(request: NextRequest) {
       leaderboard,
       standings: state.standings,
       activeCountries: state.activeCountries,
-      matchdayHistory: state.matchdayHistory.filter(h => h.simulated)
+      matchdayHistory: state.matchdayHistory.filter(h => h.simulated),
+      userHistory
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -95,6 +106,8 @@ export async function POST(request: NextRequest) {
       epochEnded: state.epochEnded,
       playerStats: lastResult.playerStats,
       nrpsResult: lastResult.nrpsResult,
+      matches: lastResult.matches,
+      eliminatedCountries: lastResult.eliminatedCountries,
       settlePayload: {
         users: settleAddresses,
         profitsOrLosses: settleProfitsOrLosses
