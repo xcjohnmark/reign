@@ -2895,12 +2895,34 @@ function PitchSlot({
   const isCaptain = captainId === playerId;
   const isViceCaptain = viceCaptainId === playerId;
 
+  const [isActive, setIsActive] = useState(false);
+  const slotRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (slotRef.current && !slotRef.current.contains(event.target as Node)) {
+        setIsActive(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   if (p) {
     const country = seedData.countries.find(c => c.id === p.countryId);
     return (
-      <div className="relative flex flex-col items-center group w-16">
+      <div ref={slotRef} className="relative flex flex-col items-center group w-16">
         {/* Card */}
-        <div className="w-12 h-12 bg-neutral-900 border border-[#00ff55]/50 group-hover:border-[#00ff55] rounded-xl flex items-center justify-center font-black text-[#00ff55] shadow-lg shadow-emerald-500/10 relative transition duration-200">
+        <div 
+          onClick={() => setIsActive(!isActive)}
+          className={`w-12 h-12 bg-neutral-900 border rounded-xl flex items-center justify-center font-black text-[#00ff55] shadow-lg shadow-emerald-500/10 relative transition-all duration-200 cursor-pointer select-none ${
+            isActive 
+              ? 'border-[#00ff55] ring-2 ring-[#00ff55]/30 scale-105 z-20' 
+              : 'border-[#00ff55]/50 group-hover:border-[#00ff55] hover:scale-105'
+          }`}
+        >
           <span className="text-lg">{country?.flag}</span>
           
           {/* Captain / Vice Captain Indicators */}
@@ -2913,8 +2935,11 @@ function PitchSlot({
 
           {/* Remove Button */}
           <button 
-            onClick={() => onRemove(p.id)}
-            className="absolute -bottom-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[8px] font-bold opacity-0 group-hover:opacity-100 transition duration-150 shadow"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(p.id);
+            }}
+            className="absolute -bottom-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[8px] font-bold opacity-0 group-hover:opacity-100 transition duration-150 shadow z-30"
             title="Remove Player"
           >
             ×
@@ -2929,15 +2954,29 @@ function PitchSlot({
 
         {/* Roles Setter Popover */}
         {onSetRole && (
-          <div className="absolute top-full mt-1 bg-neutral-950 border border-neutral-850 p-1.5 rounded-lg flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition duration-150 z-10 shadow-xl pointer-events-none group-hover:pointer-events-auto">
+          <div 
+            className={`absolute top-full mt-1 bg-neutral-950 border border-neutral-850 p-1.5 rounded-lg flex gap-1 transition-all duration-150 z-10 shadow-xl ${
+              isActive 
+                ? 'opacity-100 scale-100 pointer-events-auto' 
+                : 'opacity-0 scale-95 pointer-events-none'
+            }`}
+          >
             <button 
-              onClick={() => onSetRole('captain', p.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetRole('captain', p.id);
+                setIsActive(false);
+              }}
               className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase transition ${isCaptain ? 'bg-[#00ff55] text-black' : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-neutral-200'}`}
             >
               C
             </button>
             <button 
-              onClick={() => onSetRole('vice', p.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetRole('vice', p.id);
+                setIsActive(false);
+              }}
               className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase transition ${isViceCaptain ? 'bg-blue-500 text-white' : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-400 hover:text-neutral-200'}`}
             >
               V
