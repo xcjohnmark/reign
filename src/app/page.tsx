@@ -104,7 +104,7 @@ const reignPoolAbi = [
 ];
 
 // Contract Addresses (X Layer Testnet)
-const POOL_ADDRESS = "0x355a3608840657a6e26b493FFbcDac0cCA633c15";
+const POOL_ADDRESS = "0xFfaF1C33eE94187e7897D1E1B539665e14e593Fc";
 
 
 export default function Dashboard() {

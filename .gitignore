@@ -47,6 +47,12 @@ next-env.d.ts
 task.md
 improvements.md
 improvement.md
+implementation_plan.md
+hack-details.md
+
+# developer helper files
+CLAUDE.md
+AGENTS.md
 
 # testing scripts
 verifyPhase1.ts

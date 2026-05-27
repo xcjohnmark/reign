@@ -17,7 +17,7 @@ const reignPoolAbi = [
   }
 ];
 
-const POOL_ADDRESS = "0x355a3608840657a6e26b493FFbcDac0cCA633c15";
+const POOL_ADDRESS = "0xFfaF1C33eE94187e7897D1E1B539665e14e593Fc";
 const activeRpc = "https://testrpc.xlayer.tech/terigon";
 
 export async function POST(request: NextRequest) {
