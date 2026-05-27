@@ -8,6 +8,21 @@ Rewards are distributed dynamically using our **Normalized Relative Performance 
 
 ---
 
+## 🚀 Live Demo & Judge Quickstart
+We have deployed a live, fully-functional version of REIGN on Vercel for the hackathon judges!
+* **Live App URL:** [reignfwc.vercel.app](https://reignfwc.vercel.app)
+* **X Layer Testnet Explorer:** Deployed at address [`0xFfaF1C33eE94187e7897D1E1B539665e14e593Fc`](https://www.okx.com/explorer/xlayer-testnet/address/0xFfaF1C33eE94187e7897D1E1B539665e14e593Fc)
+
+### 🧑‍⚖️ How to Test as a Judge (1-Minute Sandbox)
+1. Navigate to the **[Live Demo](https://reignfwc.vercel.app)**.
+2. Click **Mock Sign-In** in the top-right corner. This logs you in instantly as a pre-funded test account (no extension or wallet required!).
+3. Click the **Faucet** button to claim mock OKB, then **Deposit** to lock your stake and unlock the squad builder.
+4. Go to the **Squad Builder** tab to build and save your World Cup roster (or click "Auto-Fill" to let our generator assemble a valid roster for you).
+5. Switch to the **Simulator** tab to run matchday simulations. Our backend will run the match games, calculate fantasy points, compute NRPS payouts, and distribute OKB rewards statelessly in your local sandbox!
+6. Click **Settle Matchday** to watch the simulated rewards register on-chain via our Viem server-side signer.
+
+---
+
 ## OKX & X Layer Integration Highlights
 REIGN was built from the ground up to showcase the power and scalability of OKX's Web3 infrastructure:
 * **Native OKB Integration:** Native OKB is used for player staking, deposit locking, and fee distributions on the network, driving active utility.
