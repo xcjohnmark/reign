@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readState, writeState, initializeState, simulateMatchday } from "../../../utils/gameStateHandler";
+import { readState, writeState, initializeState, simulateMatchday, GameState } from "../../../utils/gameStateHandler";
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,34 +58,34 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { action } = body;
+    const { action, state: passedState, isStateless } = body;
 
     // Reset Action
     if (action === "reset") {
-      const newState = initializeState();
+      const newState = initializeState(isStateless || passedState !== undefined);
       return NextResponse.json({
         success: true,
         message: "Tournament successfully reset",
         currentMatchday: newState.currentMatchday,
-        epochEnded: newState.epochEnded
+        epochEnded: newState.epochEnded,
+        state: newState
       });
     }
 
     // Default: Simulate current matchday
-    let state = readState();
+    let state: GameState = passedState || readState();
 
     if (state.epochEnded) {
       return NextResponse.json({ error: "Tournament epoch has already ended" }, { status: 400 });
     }
 
     // Ensure all users have a squad before simulating
-    // Specifically, if the user (or any mock competitor) does not have a squad, they get 0, but we should make sure we have at least one user
     if (state.users.length === 0) {
       return NextResponse.json({ error: "No users registered. Please submit your squad first." }, { status: 400 });
     }
 
     const currentMd = state.currentMatchday;
-    state = simulateMatchday(state);
+    state = simulateMatchday(state, passedState !== undefined);
 
     // Get the simulated history for the just-completed matchday
     const lastResult = state.matchdayHistory.find(h => h.matchday === currentMd)!;
@@ -113,7 +113,8 @@ export async function POST(request: NextRequest) {
       settlePayload: {
         users: settleAddresses,
         profitsOrLosses: settleProfitsOrLosses
-      }
+      },
+      state
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

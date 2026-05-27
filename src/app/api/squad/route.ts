@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recoverMessageAddress } from "viem";
 import { Player, isValidFormation, getFormationPositions, getMaxPlayersPerCountry, getMaxBudget } from "../../../utils/fplScoring";
-import { readState, writeState, getSeedData } from "../../../utils/gameStateHandler";
+import { readState, writeState, getSeedData, GameState } from "../../../utils/gameStateHandler";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { walletAddress, squad, signature, message } = body;
+    const { walletAddress, squad, signature, message, state: passedState } = body;
 
     if (!walletAddress || !squad || !signature || !message) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Validate Squad Structure & Constraints
-    const state = readState();
+    const state: GameState = passedState || readState();
     const currentMatchday = state.currentMatchday;
     const seed = getSeedData();
     const players: Player[] = seed.players;
@@ -165,12 +165,15 @@ export async function POST(request: NextRequest) {
       formation: formation || '4-4-2'
     };
 
-    writeState(state);
+    if (!passedState) {
+      writeState(state);
+    }
 
     return NextResponse.json({
       success: true,
       message: "Squad successfully saved",
-      squad: user.squad
+      squad: user.squad,
+      state
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -22,19 +22,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { walletAddress, action, amount } = body;
+    const { walletAddress, action, amount, state: passedState } = body;
 
     if (!walletAddress || !action) {
       return NextResponse.json({ error: "walletAddress and action are required" }, { status: 400 });
     }
 
-    const state = executeMockAction(walletAddress, action, amount);
+    const state = executeMockAction(walletAddress, action, amount, passedState);
     const user = state.users.find(u => u.wallet.toLowerCase() === walletAddress.toLowerCase())!;
 
     return NextResponse.json({
       success: true,
       message: `Mock ${action} action executed successfully`,
-      onChainState: user.onChainState
+      onChainState: user.onChainState,
+      state
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 });

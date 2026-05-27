@@ -120,6 +120,8 @@ export default function Dashboard() {
 
   // On-Chain Balances
   const [balanceOKB, setBalanceOKB] = useState<number>(0);
+  const [gameState, setGameState] = useState<any>(null);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
   const [deposited, setDeposited] = useState<boolean>(false);
   const [withdrawableProfit, setWithdrawableProfit] = useState<number>(0);
   const [lockedPrincipal, setLockedPrincipal] = useState<number>(0);
@@ -177,8 +179,120 @@ export default function Dashboard() {
   const allPlayers = seedData.players as Player[];
   const playerMap = new Map(allPlayers.map(p => [p.id, p]));
 
+  // Game State Synchronization & Stateless Actions
+  function syncGameState(state: any, currentWallet?: string) {
+    if (!state) return;
+    setGameState(state);
+    localStorage.setItem('reign_game_state', JSON.stringify(state));
+
+    const activeWallet = currentWallet || wallet;
+    if (activeWallet) {
+      const user = state.users.find((u: any) => u.wallet.toLowerCase() === activeWallet.toLowerCase());
+      if (user) {
+        setBalanceOKB(user.onChainState.okbBalance);
+        setDeposited(user.onChainState.deposited);
+        setWithdrawableProfit(user.onChainState.withdrawableProfit);
+        setLockedPrincipal(user.onChainState.lockedPrincipal);
+        
+        if (user.squad) {
+          setStarters(user.squad.starters.map((id: number | null) => id || null));
+          setSubs(user.squad.subs.map((id: number | null) => id || null));
+          setCaptainId(user.squad.captainId);
+          setViceCaptainId(user.squad.viceCaptainId);
+          setSelectedFormation(user.squad.formation || '4-4-2');
+        } else {
+          setStarters(Array(11).fill(null));
+          setSubs(Array(4).fill(null));
+          setCaptainId(null);
+          setViceCaptainId(null);
+          setSelectedFormation('4-4-2');
+        }
+        
+        setUserHistory(user.history || []);
+      } else {
+        setBalanceOKB(100.0);
+        setDeposited(false);
+        setWithdrawableProfit(0.0);
+        setLockedPrincipal(0.0);
+        setStarters(Array(11).fill(null));
+        setSubs(Array(4).fill(null));
+        setCaptainId(null);
+        setViceCaptainId(null);
+        setSelectedFormation('4-4-2');
+        setUserHistory([]);
+      }
+    }
+
+    setCurrentMatchday(state.currentMatchday);
+    setEpochEnded(state.epochEnded);
+    setStandings(state.standings || []);
+    setActiveCountries(state.activeCountries || []);
+    setMatchdayHistory(state.matchdayHistory.filter((h: any) => h.simulated) || []);
+
+    const leaderboardData = state.users.map((u: any) => {
+      const totalScore = u.history.reduce((sum: number, h: any) => sum + h.score, 0);
+      const totalReward = u.history.reduce((sum: number, h: any) => sum + h.reward, 0);
+      const totalNetProfit = u.history.reduce((sum: number, h: any) => sum + h.netProfit, 0);
+      
+      const latestHistory = u.history[u.history.length - 1];
+      const latestPnL = latestHistory ? latestHistory.netProfit : 0.0;
+      const latestScore = latestHistory ? latestHistory.score : 0;
+
+      return {
+        wallet: u.wallet,
+        name: u.name,
+        totalScore,
+        totalReward,
+        totalNetProfit,
+        latestPnL,
+        latestScore,
+        hasSquad: u.squad !== null,
+        lockedCapital: u.onChainState?.lockedPrincipal || 0.0
+      };
+    });
+    leaderboardData.sort((a: any, b: any) => b.totalScore - a.totalScore);
+    setLeaderboard(leaderboardData);
+  }
+
+  async function initializeFreshState(addr?: string) {
+    try {
+      const res = await fetch('/api/simulator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset', isStateless: true })
+      });
+      const data = await res.json();
+      if (data.state) {
+        const state = data.state;
+        const activeAddr = addr || wallet;
+        if (activeAddr) {
+          let user = state.users.find((u: any) => u.wallet.toLowerCase() === activeAddr.toLowerCase());
+          if (!user) {
+            user = {
+              wallet: activeAddr.toLowerCase(),
+              name: "User",
+              squad: null,
+              history: [],
+              onChainState: {
+                okbBalance: 100.0,
+                deposited: false,
+                withdrawableProfit: 0.0,
+                lockedPrincipal: 0.0
+              }
+            };
+            state.users.push(user);
+          }
+        }
+        syncGameState(state, activeAddr);
+      }
+    } catch (err) {
+      console.error("Failed to initialize fresh state", err);
+    }
+  }
+
   // Auto-connect mock wallet if saved
   useEffect(() => {
+    setIsMounted(true);
     const savedWallet = localStorage.getItem('reign_wallet');
     const savedType = localStorage.getItem('reign_wallet_type');
     const savedProvider = localStorage.getItem('reign_wallet_provider');
@@ -191,6 +305,42 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Load state on mount or when wallet / walletType updates
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const savedStateStr = localStorage.getItem('reign_game_state');
+    if (savedStateStr) {
+      try {
+        const state = JSON.parse(savedStateStr);
+        if (wallet) {
+          let user = state.users.find((u: any) => u.wallet.toLowerCase() === wallet.toLowerCase());
+          if (!user) {
+            user = {
+              wallet: wallet.toLowerCase(),
+              name: "User",
+              squad: null,
+              history: [],
+              onChainState: {
+                okbBalance: 100.0,
+                deposited: false,
+                withdrawableProfit: 0.0,
+                lockedPrincipal: 0.0
+              }
+            };
+            state.users.push(user);
+          }
+        }
+        syncGameState(state);
+      } catch (err) {
+        console.error("Error parsing saved game state from localStorage, initializing fresh", err);
+        initializeFreshState();
+      }
+    } else {
+      initializeFreshState();
+    }
+  }, [isMounted, wallet, walletType]);
+
   // Fetch data when wallet connects
   useEffect(() => {
     if (wallet) {
@@ -198,7 +348,7 @@ export default function Dashboard() {
       loadSquadState();
       loadSimulatorState();
     }
-  }, [wallet, walletType]);
+  }, [wallet, walletType, gameState]);
 
   // Listen for accountsChanged and chainChanged on real Web3 wallet
   useEffect(() => {
@@ -298,17 +448,27 @@ export default function Dashboard() {
   const loadWeb3State = async () => {
     if (!wallet) return;
     if (walletType === 'mock') {
-      try {
-        const res = await fetch(`/api/web3?wallet=${wallet}`);
-        const data = await res.json();
-        if (data.onChainState) {
-          setBalanceOKB(data.onChainState.okbBalance);
-          setDeposited(data.onChainState.deposited);
-          setWithdrawableProfit(data.onChainState.withdrawableProfit);
-          setLockedPrincipal(data.onChainState.lockedPrincipal);
+      if (gameState) {
+        const user = gameState.users.find((u: any) => u.wallet.toLowerCase() === wallet.toLowerCase());
+        if (user) {
+          setBalanceOKB(user.onChainState.okbBalance);
+          setDeposited(user.onChainState.deposited);
+          setWithdrawableProfit(user.onChainState.withdrawableProfit);
+          setLockedPrincipal(user.onChainState.lockedPrincipal);
         }
-      } catch (err) {
-        console.error("Failed to load mock web3 state", err);
+      } else {
+        try {
+          const res = await fetch(`/api/web3?wallet=${wallet}`);
+          const data = await res.json();
+          if (data.onChainState) {
+            setBalanceOKB(data.onChainState.okbBalance);
+            setDeposited(data.onChainState.deposited);
+            setWithdrawableProfit(data.onChainState.withdrawableProfit);
+            setLockedPrincipal(data.onChainState.lockedPrincipal);
+          }
+        } catch (err) {
+          console.error("Failed to load mock web3 state", err);
+        }
       }
     } else {
       // Real Web3 Mode
@@ -438,6 +598,26 @@ export default function Dashboard() {
 
   const loadSquadState = async () => {
     if (!wallet) return;
+    if (gameState) {
+      const user = gameState.users.find((u: any) => u.wallet.toLowerCase() === wallet.toLowerCase());
+      if (user && user.squad) {
+        const { starters: s, subs: b, captainId: cap, viceCaptainId: vice, formation: form } = user.squad;
+        const newStarters = s.map((id: number | null) => id || null);
+        const newSubs = b.map((id: number | null) => id || null);
+        setStarters(newStarters);
+        setSubs(newSubs);
+        setCaptainId(cap);
+        setViceCaptainId(vice);
+        setSelectedFormation(form || '4-4-2');
+      } else {
+        setStarters(Array(11).fill(null));
+        setSubs(Array(4).fill(null));
+        setCaptainId(null);
+        setViceCaptainId(null);
+        setSelectedFormation('4-4-2');
+      }
+      return;
+    }
     try {
       const res = await fetch(`/api/squad?wallet=${wallet}`);
       const data = await res.json();
@@ -485,6 +665,10 @@ export default function Dashboard() {
   };
 
   const loadSimulatorState = async () => {
+    if (gameState) {
+      syncGameState(gameState);
+      return;
+    }
     try {
       const url = wallet ? `/api/simulator?wallet=${wallet.toLowerCase()}` : '/api/simulator';
       const res = await fetch(url);
@@ -620,15 +804,19 @@ export default function Dashboard() {
       const res = await fetch('/api/web3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: wallet, action, amount })
+        body: JSON.stringify({ walletAddress: wallet, action, amount, state: gameState || undefined })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setBalanceOKB(data.onChainState.okbBalance);
-      setDeposited(data.onChainState.deposited);
-      setWithdrawableProfit(data.onChainState.withdrawableProfit);
-      setLockedPrincipal(data.onChainState.lockedPrincipal);
+      if (data.state) {
+        syncGameState(data.state);
+      } else {
+        setBalanceOKB(data.onChainState.okbBalance);
+        setDeposited(data.onChainState.deposited);
+        setWithdrawableProfit(data.onChainState.withdrawableProfit);
+        setLockedPrincipal(data.onChainState.lockedPrincipal);
+      }
       setSuccessMsg(`Mock ${action} executed successfully!`);
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -1122,7 +1310,8 @@ export default function Dashboard() {
           walletAddress: wallet,
           squad: { starters, subs, captainId, viceCaptainId, formation: selectedFormation },
           signature,
-          message
+          message,
+          state: gameState || undefined
         })
       });
 
@@ -1130,7 +1319,11 @@ export default function Dashboard() {
       if (!res.ok) throw new Error(data.error);
 
       setSuccessMsg("Squad saved and locked successfully!");
-      loadSimulatorState();
+      if (data.state) {
+        syncGameState(data.state);
+      } else {
+        loadSimulatorState();
+      }
     } catch (err: any) {
       setErrorMsg("Failed to save squad: " + err.message);
     } finally {
@@ -1149,7 +1342,8 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/simulator', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: gameState || undefined })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -1157,8 +1351,13 @@ export default function Dashboard() {
       setSimulationResult(data);
       setSuccessMsg(`Matchday ${data.simulatedMatchday} simulated successfully!`);
       setActiveResultsMatchday(data.simulatedMatchday); // Auto-open results modal!
-      loadSimulatorState();
-      loadWeb3State(); // reload wallet to get new rewards/ledger
+      
+      if (data.state) {
+        syncGameState(data.state);
+      } else {
+        loadSimulatorState();
+        loadWeb3State(); // reload wallet to get new rewards/ledger
+      }
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -1214,7 +1413,7 @@ export default function Dashboard() {
       const res = await fetch('/api/simulator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset' })
+        body: JSON.stringify({ action: 'reset', state: gameState || undefined })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -1225,8 +1424,12 @@ export default function Dashboard() {
       setSubs(Array(4).fill(null));
       setCaptainId(null);
       setViceCaptainId(null);
-      loadSimulatorState();
-      setTimeout(loadWeb3State, 500);
+      if (data.state) {
+        syncGameState(data.state);
+      } else {
+        loadSimulatorState();
+        setTimeout(loadWeb3State, 500);
+      }
     } catch (err: any) {
       setErrorMsg(err.message);
     }
@@ -1305,6 +1508,16 @@ export default function Dashboard() {
       </div>
     );
   };
+
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-[#070708] flex flex-col items-center justify-center text-slate-200">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00ff55] mb-4"></div>
+        <h2 className="text-xl font-semibold tracking-wider">Loading REIGN Dashboard...</h2>
+        <p className="text-sm text-neutral-500 mt-2">Preparing Web3 Pitch & Simulator</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 bg-black text-neutral-100 font-sans flex flex-col min-h-screen">

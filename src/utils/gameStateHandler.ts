@@ -80,11 +80,15 @@ export function readState(): GameState {
 
 // Write State
 export function writeState(state: GameState): void {
-  fs.writeFileSync(STATE_FILE_PATH, JSON.stringify(state, null, 2), 'utf8');
+  try {
+    fs.writeFileSync(STATE_FILE_PATH, JSON.stringify(state, null, 2), 'utf8');
+  } catch (error: any) {
+    console.warn("Unable to write state to disk (this is expected on serverless environments):", error.message);
+  }
 }
 
 // Initialize State
-export function initializeState(): GameState {
+export function initializeState(isStateless = false): GameState {
   const seed = getSeedData();
   const players: Player[] = seed.players;
   const countries = seed.countries;
@@ -151,7 +155,9 @@ export function initializeState(): GameState {
     standings
   };
 
-  writeState(state);
+  if (!isStateless) {
+    writeState(state);
+  }
   return state;
 }
 
@@ -205,7 +211,7 @@ function getCheapestActivePlayer(
 }
 
 // Simulate Matchday
-export function simulateMatchday(state: GameState): GameState {
+export function simulateMatchday(state: GameState, isStateless = false): GameState {
   const md = state.currentMatchday;
   if (md > 7 || state.epochEnded) {
     throw new Error("Tournament has already ended");
@@ -539,7 +545,9 @@ export function simulateMatchday(state: GameState): GameState {
     }
   }
 
-  writeState(state);
+  if (!isStateless) {
+    writeState(state);
+  }
   return state;
 }
 
@@ -584,8 +592,8 @@ function allocateGoalsAndAssists(teamPlayers: Player[], goals: number, statsMap:
 // MOCK BLOCKCHAIN OPERATIONS
 // ==========================================
 
-export function getOrCreateMockUser(walletAddress: string): UserState {
-  const state = readState();
+export function getOrCreateMockUser(walletAddress: string, passedState?: GameState): UserState {
+  const state = passedState || readState();
   let user = state.users.find(u => u.wallet.toLowerCase() === walletAddress.toLowerCase());
   
   if (!user) {
@@ -602,13 +610,15 @@ export function getOrCreateMockUser(walletAddress: string): UserState {
       }
     };
     state.users.push(user);
-    writeState(state);
+    if (!passedState) {
+      writeState(state);
+    }
   }
   return user;
 }
 
-export function executeMockAction(walletAddress: string, action: string, amount?: number): GameState {
-  const state = readState();
+export function executeMockAction(walletAddress: string, action: string, amount?: number, passedState?: GameState): GameState {
+  const state = passedState || readState();
   const user = state.users.find(u => u.wallet.toLowerCase() === walletAddress.toLowerCase()) || {
     wallet: walletAddress.toLowerCase(),
     name: "User",
@@ -661,6 +671,8 @@ export function executeMockAction(walletAddress: string, action: string, amount?
     throw new Error("Unknown mock action: " + action);
   }
 
-  writeState(state);
+  if (!passedState) {
+    writeState(state);
+  }
   return state;
 }
