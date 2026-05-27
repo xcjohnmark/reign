@@ -5,6 +5,7 @@ export interface Player {
   position: 'GK' | 'DEF' | 'MID' | 'FWD';
   price: number;
   rating: number;
+  espnId?: number;
 }
 
 export interface MatchStats {

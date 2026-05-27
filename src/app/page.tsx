@@ -1937,8 +1937,8 @@ export default function Dashboard() {
                                 key={player.id} 
                                 className={`bg-neutral-900/40 border border-neutral-900 rounded-xl p-3 flex items-center justify-between transition-all hover:bg-neutral-900/80 ${isAdded || isEliminated ? 'opacity-40' : ''}`}
                               >
-                                <div className="flex items-center gap-2.5">
-                                  <span className="text-xl">{country?.flag || '🏳️'}</span>
+                                <div className="flex items-center gap-3">
+                                  <FUTCard player={player} isEliminated={isEliminated} size="sm" />
                                   <div>
                                     <div className="flex items-center gap-1.5">
                                       <h4 className={`text-xs font-bold ${isEliminated ? 'text-neutral-500 line-through' : 'text-neutral-200'}`}>{player.name}</h4>
@@ -2877,6 +2877,169 @@ export default function Dashboard() {
 
 // Sub-components
 
+interface FUTCardProps {
+  player: Player;
+  isCaptain?: boolean;
+  isViceCaptain?: boolean;
+  isEliminated?: boolean;
+  size?: 'sm' | 'md';
+}
+
+function FUTCard({ player, isCaptain, isViceCaptain, isEliminated, size = 'md' }: FUTCardProps) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [player.id]);
+
+  const rating = player.rating;
+  let cardClass = "";
+
+  if (rating >= 85) {
+    // Gold card
+    cardClass = "bg-gradient-to-b from-[#ffe57f] via-[#ffd54f] to-[#ff8f00] border-[#ffd700] shadow-[0_0_12px_rgba(251,191,36,0.3)] text-amber-950 font-black";
+  } else if (rating >= 78) {
+    // Silver card
+    cardClass = "bg-gradient-to-b from-[#f1f5f9] via-[#cbd5e1] to-[#64748b] border-[#cbd5e1] shadow-[0_0_10px_rgba(203,213,225,0.25)] text-slate-900 font-bold";
+  } else {
+    // Bronze card
+    cardClass = "bg-gradient-to-b from-[#d97706] via-[#b45309] to-[#78350f] border-[#d97706] shadow-[0_0_8px_rgba(217,119,6,0.2)] text-amber-100 font-semibold";
+  }
+
+  const getCountryColors = (cid: string) => {
+    const colors: Record<string, { primary: string; secondary: string }> = {
+      USA: { primary: '#0A3161', secondary: '#B31942' },
+      GER: { primary: '#FFFFFF', secondary: '#000000' },
+      FRA: { primary: '#00209F', secondary: '#E30613' },
+      ESP: { primary: '#C60B1E', secondary: '#FFC400' },
+      POR: { primary: '#C60B1E', secondary: '#046A38' },
+      MAR: { primary: '#C1272D', secondary: '#006233' },
+      ENG: { primary: '#FFFFFF', secondary: '#CE1126' },
+      BRA: { primary: '#FFDF00', secondary: '#009739' },
+      ARG: { primary: '#75AADB', secondary: '#FFFFFF' },
+      NED: { primary: '#F36C21', secondary: '#FFFFFF' },
+      CRO: { primary: '#C60B1E', secondary: '#FFFFFF' },
+      MEX: { primary: '#006341', secondary: '#C8102E' },
+      CAN: { primary: '#FF0000', secondary: '#FFFFFF' },
+      JPN: { primary: '#00008B', secondary: '#FFFFFF' },
+      KOR: { primary: '#C1272D', secondary: '#002F6C' },
+      URU: { primary: '#75AADB', secondary: '#FFFFFF' },
+      COL: { primary: '#FCD116', secondary: '#003893' },
+      BEL: { primary: '#E30613', secondary: '#FFD100' },
+      SUI: { primary: '#DA291C', secondary: '#FFFFFF' },
+      AUT: { primary: '#ED2939', secondary: '#FFFFFF' },
+      SWE: { primary: '#006AA7', secondary: '#FECC02' },
+      NOR: { primary: '#BA0C2F', secondary: '#00205B' },
+      SCO: { primary: '#002B62', secondary: '#FFFFFF' },
+      SEN: { primary: '#00853F', secondary: '#E30613' },
+      EGY: { primary: '#C1272D', secondary: '#FFFFFF' },
+      GHA: { primary: '#FCD116', secondary: '#E30613' },
+      CIV: { primary: '#F77F00', secondary: '#009E60' }
+    };
+    return colors[cid] || { primary: '#404040', secondary: '#737373' };
+  };
+
+  const colors = getCountryColors(player.countryId);
+  const country = seedData.countries.find(c => c.id === player.countryId);
+  const lastName = player.name.split(" ").pop()?.toUpperCase() || "";
+
+  if (size === 'sm') {
+    return (
+      <div className={`w-10 h-14 border rounded-lg flex flex-col justify-between p-0.5 relative overflow-hidden transition-all duration-200 ${cardClass} ${isEliminated ? 'opacity-30' : ''}`}>
+        <div className="flex justify-between items-center w-full leading-none">
+          <span className="text-[8px] font-black">{rating}</span>
+          <span className="text-[8px]">{country?.flag}</span>
+        </div>
+        
+        <div className="flex justify-center items-center flex-1 h-7 min-h-0 relative">
+          {player.espnId && !imgError ? (
+            <img 
+              src={`https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${player.espnId}.png&w=96&h=96&scale=crop`} 
+              alt={player.name}
+              onError={() => setImgError(true)}
+              className="w-7 h-7 object-cover object-top select-none"
+            />
+          ) : (
+            <svg viewBox="0 0 100 100" className="w-6 h-6 drop-shadow select-none">
+              <path d="M 20 30 L 35 15 L 50 25 L 65 15 L 80 30 L 75 45 L 65 40 L 65 85 L 35 85 L 35 40 L 25 45 Z" fill={colors.primary} stroke={colors.secondary} strokeWidth="4" />
+              <path d="M 40 15 A 10 10 0 0 0 60 15 Z" fill="#171717" />
+              {player.countryId === 'ARG' && (
+                <>
+                  <rect x="42" y="25" width="5" height="60" fill={colors.secondary} />
+                  <rect x="53" y="25" width="5" height="60" fill={colors.secondary} />
+                </>
+              )}
+            </svg>
+          )}
+        </div>
+
+        <p className="text-[6px] font-black text-center truncate w-full tracking-wide">
+          {lastName}
+        </p>
+      </div>
+    );
+  }
+
+  // Medium card for Pitch
+  return (
+    <div className={`w-14 h-20 border rounded-xl flex flex-col justify-between p-1 relative overflow-hidden transition-all duration-200 ${cardClass} ${isEliminated ? 'opacity-30' : ''}`}>
+      <div className="flex justify-between items-start w-full leading-none">
+        <div className="flex flex-col items-start leading-none">
+          <span className="text-[10px] font-black leading-none">{rating}</span>
+          <span className="text-[6px] opacity-85 font-black uppercase tracking-wider mt-0.5 leading-none">{player.position}</span>
+        </div>
+        <span className="text-[10px] leading-none">{country?.flag}</span>
+      </div>
+
+      <div className="flex justify-center items-center flex-1 h-10 min-h-0 relative">
+        {player.espnId && !imgError ? (
+          <img 
+            src={`https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${player.espnId}.png&w=96&h=96&scale=crop`} 
+            alt={player.name}
+            onError={() => setImgError(true)}
+            className="w-10 h-10 object-cover object-top select-none"
+          />
+        ) : (
+          <svg viewBox="0 0 100 100" className="w-9 h-9 drop-shadow select-none">
+            <path d="M 20 30 L 35 15 L 50 25 L 65 15 L 80 30 L 75 45 L 65 40 L 65 85 L 35 85 L 35 40 L 25 45 Z" fill={colors.primary} stroke={colors.secondary} strokeWidth="4" />
+            <path d="M 40 15 A 10 10 0 0 0 60 15 Z" fill="#171717" />
+            {player.countryId === 'ARG' && (
+              <>
+                <rect x="42" y="25" width="5" height="60" fill={colors.secondary} />
+                <rect x="53" y="25" width="5" height="60" fill={colors.secondary} />
+              </>
+            )}
+            {player.countryId === 'CRO' && (
+              <>
+                <rect x="38" y="28" width="8" height="8" fill={colors.secondary} />
+                <rect x="54" y="28" width="8" height="8" fill={colors.secondary} />
+                <rect x="46" y="36" width="8" height="8" fill={colors.secondary} />
+                <rect x="38" y="44" width="8" height="8" fill={colors.secondary} />
+                <rect x="54" y="44" width="8" height="8" fill={colors.secondary} />
+              </>
+            )}
+            {player.countryId === 'BRA' && (
+              <circle cx="50" cy="50" r="7" fill={colors.secondary} />
+            )}
+          </svg>
+        )}
+      </div>
+
+      <p className="text-[7.5px] font-black text-center truncate w-full tracking-wide">
+        {lastName}
+      </p>
+
+      {/* Role badges overlay */}
+      {isCaptain && (
+        <span className="absolute top-1/2 left-0.5 -translate-y-1/2 bg-[#00ff55] text-black w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] font-black border border-black shadow">C</span>
+      )}
+      {isViceCaptain && (
+        <span className="absolute top-1/2 left-0.5 -translate-y-1/2 bg-blue-500 text-white w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] font-black border border-black shadow">V</span>
+      )}
+    </div>
+  );
+}
+
 interface PitchSlotProps {
   index: number;
   position: string;
@@ -2913,27 +3076,22 @@ function PitchSlot({
   }, []);
 
   if (p) {
-    const country = seedData.countries.find(c => c.id === p.countryId);
     return (
       <div ref={slotRef} className="relative flex flex-col items-center group w-16">
         {/* Card */}
         <div 
           onClick={() => setIsActive(!isActive)}
-          className={`w-12 h-12 bg-neutral-900 border rounded-xl flex items-center justify-center font-black text-[#00ff55] shadow-lg shadow-emerald-500/10 relative transition-all duration-200 cursor-pointer select-none ${
+          className={`relative transition-all duration-200 cursor-pointer select-none ${
             isActive 
-              ? 'border-[#00ff55] ring-2 ring-[#00ff55]/30 scale-105 z-20' 
-              : 'border-[#00ff55]/50 group-hover:border-[#00ff55] hover:scale-105'
+              ? 'ring-2 ring-[#00ff55] rounded-2xl scale-105 z-20 shadow-xl' 
+              : 'hover:scale-105'
           }`}
         >
-          <span className="text-lg">{country?.flag}</span>
-          
-          {/* Captain / Vice Captain Indicators */}
-          {isCaptain && (
-            <span className="absolute -top-1.5 -right-1.5 bg-[#00ff55] text-black w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-black border border-black shadow">C</span>
-          )}
-          {isViceCaptain && (
-            <span className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-black border border-black shadow">V</span>
-          )}
+          <FUTCard 
+            player={p} 
+            isCaptain={isCaptain} 
+            isViceCaptain={isViceCaptain} 
+          />
 
           {/* Remove Button */}
           <button 
@@ -2941,18 +3099,15 @@ function PitchSlot({
               e.stopPropagation();
               onRemove(p.id);
             }}
-            className="absolute -bottom-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-4.5 h-4.5 flex items-center justify-center text-[8px] font-bold opacity-0 group-hover:opacity-100 transition duration-150 shadow z-30"
+            className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] font-bold opacity-0 group-hover:opacity-100 transition duration-150 shadow z-30"
             title="Remove Player"
           >
             ×
           </button>
         </div>
 
-        {/* Name Label */}
-        <p className="text-[9px] font-bold text-neutral-300 text-center w-20 truncate mt-1 bg-neutral-950/70 px-1 py-0.5 rounded border border-neutral-900 group-hover:border-neutral-800 transition">
-          {p.name.split(" ").pop()}
-        </p>
-        <p className="text-[8px] font-bold text-[#00ff55]">${p.price.toFixed(1)}M</p>
+        {/* Price Label */}
+        <p className="text-[8px] font-bold text-[#00ff55] mt-1">${p.price.toFixed(1)}M</p>
 
         {/* Roles Setter Popover */}
         {onSetRole && (
@@ -2992,10 +3147,10 @@ function PitchSlot({
   return (
     <button 
       onClick={onSelect}
-      className="w-12 h-12 bg-neutral-900/60 hover:bg-neutral-900 border border-neutral-850 hover:border-neutral-700 border-dashed rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:text-[#00ff55] transition duration-200 cursor-pointer"
+      className="w-14 h-20 bg-neutral-900/40 hover:bg-neutral-900/80 border border-neutral-850 hover:border-neutral-600 border-dashed rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:text-[#00ff55] transition duration-200 cursor-pointer"
     >
-      <span className="text-[10px] font-bold uppercase tracking-wider">{position}</span>
-      <span className="text-sm font-light mt-0.5">+</span>
+      <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400">{position}</span>
+      <span className="text-lg font-light mt-1 text-neutral-600 group-hover:text-[#00ff55]">+</span>
     </button>
   );
 }
