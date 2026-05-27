@@ -116,57 +116,33 @@ The **Normalized Relative Performance System (NRPS)** solves this by calculating
 
 ---
 
-## Installation & Setup
+## Deployed Application & Navigation Guide
+REIGN is fully deployed and optimized for immediate web-based evaluation. The judges do not need to run any local code, setup RPC nodes, or launch Docker containers.
 
-### Prerequisites
-* **Node.js**: `v20.0.0` or higher
-* **Docker & Docker Compose**: (Optional, for containerized runner)
-* **Web3 Wallet Extension:** (OKX Wallet recommended)
+* **Live Application URL:** [reignfwc.vercel.app](https://reignfwc.vercel.app)
+* **X Layer Testnet Explorer:** Deployed at address [`0xFfaF1C33eE94187e7897D1E1B539665e14e593Fc`](https://www.okx.com/explorer/xlayer-testnet/address/0xFfaF1C33eE94187e7897D1E1B539665e14e593Fc)
 
----
+### 🗺️ Application Navigation & User Loop
 
-### Option 1: Quickstart via Docker Compose (Recommended)
-This command builds and launches the Next.js frontend and a local Hardhat EVM network node with pre-compiled and deployed contracts.
-```bash
-docker-compose up --build
-```
-1. Access the web app at [http://localhost:3000](http://localhost:3000).
-2. The Hardhat RPC provider runs at [http://localhost:8545](http://localhost:8545).
+#### 1. The Web3 Sandbox (Mock Sign-In)
+To facilitate seamless testing, click **Mock Sign-In** in the top-right header. This logs you in as Hardhat Account #0 (`0xf39fd6e51aad88f6f4ce...`) and enables a high-fidelity Web3 simulation sandbox where you can:
+* **Mint Mock OKB:** Click the **Faucet** button to claim mock tokens.
+* **Deposit Entry Stake:** Input your stake (min 0.125 OKB) and deposit. The system automatically locks 80% as refundable principal and routes 20% to the matchday reward pool.
+* **Withdraw Profits & Principal:** Claim rewards dynamically as you win, and withdraw your locked principal safely once the 7-day tournament epoch ends.
 
----
+#### 2. Roster Drafting & Squad Builder
+* **Build Roster:** Select 15 real players (11 starters, 4 subs) from the World Cup dataset. Use sorting (by Price or Rating) and filtering to draft your squad.
+* **Verify Constraints:** The builder enforces a dynamic budget cap (starting at $100M) and country quotas (max 3 players per nation) which scale dynamically by matchday.
+* **Tactical Settings:** Select your formation (e.g. 3-5-2, 4-4-2) and designate your Captain (scores $2\times$ points) and Vice-Captain.
 
-### Option 2: Running Locally (Manual Setup)
+#### 3. Matchday Simulator
+* **Simulate Matchday:** Go to the **Simulator** tab and click **Simulate Current Matchday**. The engine generates realistic matches, scorelines, and goals for the active countries.
+* **Review Stats:** Check matches played, goals, assists, saves, clean sheets, and FPL bonus points computed in real-time.
+* **On-Chain Settlement:** Click **Settle Matchday** to execute the payouts. Our Viem server-side signer signs and relays the settlement transaction directly to the L2 smart contract.
 
-#### 1. Contract Environment Setup
-Navigate to the `contracts` directory, install dependencies, and run a local node:
-```bash
-cd contracts
-npm install
-npx hardhat node
-```
-
-In a new terminal, deploy the smart contracts to your local network node:
-```bash
-cd contracts
-npx hardhat run scripts/deploy.ts --network localhost
-```
-
-#### 2. Frontend Launch
-Return to the root directory, install frontend dependencies, and launch the dev server:
-```bash
-cd ..
-npm install
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) to view the application.
-
----
-
-### Option 3: Mock Mode (No Local EVM Node or Wallet Required)
-If you do not want to set up an RPC node or connect a wallet extension:
-1. Start the Next.js frontend: `npm run dev`
-2. Open the page and click **Mock Sign-In** in the top-right header.
-3. This logs you in as Hardhat Account #0 (`0xf39fd6e51aad88f6f4ce...`) and simulates all Web3 actions (minting OKB, depositing, locking, simulating matchdays, withdrawing profits) through a high-fidelity mock database state persisted in `src/data/gameState.json`.
+#### 4. Standings & Leaderboards
+* Go to the **Standings** tab to see country groups and knockout brackets update.
+* Go to the **Leaderboard** tab to review your rankings against the 15 simulated competitors, with total scores and profits recalculated dynamically.
 
 ---
 
